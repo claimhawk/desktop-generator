@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Generated datasets
+datasets/
+
+# IDE
+.idea/
+.vscode/
+*.swp
