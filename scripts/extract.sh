@@ -6,7 +6,7 @@
 # Pipeline: generate.sh -> upload.sh -> extract.sh -> preprocess.sh
 #
 # Usage:
-#   ./scripts/preprocess.sh --dataset-name <NAME>
+#   ./scripts/extract.sh --dataset-name <NAME>
 
 set -euo pipefail
 
@@ -30,7 +30,7 @@ if [[ -z "$DATASET_NAME" ]]; then
 fi
 
 echo "========================================"
-echo "STAGE 4: Preprocess Dataset"
+echo "STAGE 3: Extract Dataset"
 echo "========================================"
 echo ""
 echo "Dataset: $DATASET_NAME"
@@ -39,13 +39,21 @@ echo ""
 # Find cudag directory for local dev
 CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
 
-# Find cudag's preprocess.py location and run via Modal
+# Find cudag's extract.py location and run via Modal
 if [[ -d "$CUDAG_DIR" ]]; then
-    CUDAG_PATH=$(uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -c "import cudag.modal_apps.preprocess as p; print(p.__file__)")
+    CUDAG_PATH=$(uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -c "import cudag.modal_apps.extract as e; print(e.__file__)")
 else
-    CUDAG_PATH=$(uvx --with cudag python -c "import cudag.modal_apps.preprocess as p; print(p.__file__)")
+    CUDAG_PATH=$(uvx --with cudag python -c "import cudag.modal_apps.extract as e; print(e.__file__)")
 fi
-uvx modal run --detach "$CUDAG_PATH" --dataset-name "$DATASET_NAME"
+uvx modal run "$CUDAG_PATH" --dataset-name "$DATASET_NAME"
 
 echo ""
-echo "Preprocessing job started for: $DATASET_NAME"
+echo "Extraction complete for: $DATASET_NAME"
+
+echo ""
+echo "========================================"
+echo "Auto-starting preprocessing..."
+echo "========================================"
+echo ""
+
+exec ./scripts/preprocess.sh --dataset-name "$DATASET_NAME"

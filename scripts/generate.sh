@@ -31,8 +31,25 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo ""
 fi
 
+# Find cudag directory (relative to this project for local dev)
+CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
+
 # Run the dataset generation
-uv run python -m test_desktop_generator.generator "${EXTRA_ARGS[@]}"
+if [[ -d "$CUDAG_DIR" ]]; then
+    # Local development: use cudag from file path (--refresh to pick up changes)
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        uvx --refresh --with "cudag @ file://$CUDAG_DIR" --with pillow python generator.py "${EXTRA_ARGS[@]}"
+    else
+        uvx --refresh --with "cudag @ file://$CUDAG_DIR" --with pillow python generator.py
+    fi
+else
+    # Production: use cudag from PyPI
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        uvx --with cudag --with pillow python generator.py "${EXTRA_ARGS[@]}"
+    else
+        uvx --with cudag --with pillow python generator.py
+    fi
+fi
 
 if [[ $? -ne 0 ]]; then
     echo ""

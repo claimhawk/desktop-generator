@@ -2,45 +2,70 @@
 # Derivative works may be released by researchers,
 # but original files may not be redistributed or used beyond research purposes.
 
-"""Screen definition for test_desktop_generator."""
+"""Screen definition for Windows 11 desktop generator."""
 
-from typing import Any, NoReturn
+from typing import Any
 
-from cudag.core import Screen
-
-# Uncomment to use these region types:
-# from cudag.core import Bounds, ButtonRegion, GridRegion, ClickRegion
+from cudag.core import Screen, region
 
 
-class TestDesktopGeneratorScreen(Screen):
-    """Define the screen layout and interactive regions.
+class DesktopScreen(Screen):
+    """Windows 11 desktop screen with taskbar.
 
-    Edit this class to define your screen's regions:
-    - ButtonRegion for clickable buttons
-    - GridRegion for grid-like clickable areas
-    - ScrollRegion for scrollable areas
-    - DropdownRegion for dropdown menus
+    Layout:
+    - Desktop area: 1920x1032, anchored top-left (icons with labels)
+    - Taskbar: 1920x48, anchored bottom-left (icons without labels)
+    - DateTime: ~80x30, anchored bottom-right
     """
 
     class Meta:
-        name = "test_desktop_generator"
-        base_image = "assets/base.png"  # Your base screenshot
-        size = (800, 600)  # Image dimensions
+        name = "desktop"
+        base_image = "blanks/desktop-blank.png"
+        size = (1920, 1080)
+        task_types = ["click-desktop-icon", "click-taskbar-icon"]
 
-    # Example: Define a clickable grid region
-    # grid = GridRegion(
-    #     bounds=Bounds(x=100, y=100, width=400, height=300),
-    #     rows=5,
-    #     cols=4,
-    # )
+    # Desktop icon area (top portion, leaving room for taskbar)
+    desktop_area = region((0, 0, 1920, 1032))
 
-    # Example: Define a button
-    # submit_button = ButtonRegion(
-    #     bounds=Bounds(x=350, y=450, width=100, height=40),
-    #     label="Submit",
-    #     description="Submit the form",
-    # )
+    # Taskbar at bottom
+    taskbar = region((0, 1032, 1920, 48))
 
-    def render(self, state: Any) -> NoReturn:
+    # Date/time area in bottom-right of taskbar
+    datetime_area = region((1840, 1050, 80, 30))
+
+    def render(self, state: Any) -> tuple[Any, dict[str, Any]]:
         """Render is handled by the Renderer class."""
-        raise NotImplementedError("Use TestDesktopGeneratorRenderer instead")
+        raise NotImplementedError("Use DesktopRenderer instead")
+
+
+# Icon metadata - desktop icons with labels
+DESKTOP_ICONS = {
+    "od": {"file": "desktop/icon-od-clean.png", "label": "Open Dental", "required": True},
+    "pms": {"file": "desktop/icon-pms-clean.png", "label": "PMS", "required": True},
+    "chrome": {"file": "desktop/icon-chrome-clean.png", "label": "Chrome"},
+    "edge": {"file": "desktop/icon-edge-clean.png", "label": "Edge"},
+    "ezdent": {"file": "desktop/icon-ezdent-clean.png", "label": "EZDent"},
+    "brother": {"file": "desktop/icon-brother-clean.png", "label": "Brother"},
+    "trash": {"file": "desktop/icon-trash-clean.png", "label": "Recycle Bin"},
+}
+
+# Taskbar icons - no labels
+TASKBAR_ICONS = {
+    "explorer": {"file": "taskbar/icon-tb-explorer.png"},
+    "edge": {"file": "taskbar/icon-tb-edge.png"},
+    "od": {"file": "taskbar/icon-tb-od.png"},
+}
+
+# Layout constants
+DESKTOP_ICON_SIZE = (54, 54)
+DESKTOP_ICON_PADDING = 20
+DESKTOP_LABEL_HEIGHT = 20
+DESKTOP_CELL_WIDTH = DESKTOP_ICON_SIZE[0] + DESKTOP_ICON_PADDING
+DESKTOP_CELL_HEIGHT = DESKTOP_ICON_SIZE[1] + DESKTOP_LABEL_HEIGHT + DESKTOP_ICON_PADDING
+
+TASKBAR_ICON_SIZE = (27, 28)
+TASKBAR_ICON_GAP = 8
+TASKBAR_LEFT_MARGIN = 946  # After start button and search bar (946px from left)
+TASKBAR_Y_OFFSET = 1042  # Top of taskbar icons (1039+3px)
+
+DATETIME_FONT_SIZE = 9

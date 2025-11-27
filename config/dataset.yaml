@@ -1,25 +1,26 @@
 # Dataset configuration for test-desktop-generator
 
-name_prefix: test-desktop-generator
+name_prefix: desktop
 seed: 42
 
 # Task counts - how many samples of each type
 tasks:
-  example-click: 100
+  click-desktop-icon: 100
+  click-taskbar-icon: 100
 
 # Train/test split
 splits:
-  train: 0.8
+  train: 0.9
 
 # System prompt style: "osworld" or "compact"
 system_prompt: compact
 
 # Output settings
 output:
-  image_format: png
-  image_quality: 95
+  image_format: jpg
+  image_quality: 85
 
 # Evaluation settings
 evals:
-  count: 20
+  count: 100
   tolerance: 10

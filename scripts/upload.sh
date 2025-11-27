@@ -45,9 +45,24 @@ if [[ "$DRY_RUN" == "true" ]]; then
     exit 0
 fi
 
-# Upload via Modal (customize this for your setup)
+# Find cudag directory for local dev
+CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
+
+# Upload via Modal
 echo "Uploading to Modal volume..."
-uv run python -m modal_apps.upload "$DATASET_DIR"
+if [[ -d "$CUDAG_DIR" ]]; then
+    uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -m cudag.modal_apps.upload "$DATASET_DIR"
+else
+    uvx --with cudag python -m cudag.modal_apps.upload "$DATASET_DIR"
+fi
 
 echo ""
 echo "Upload complete: $DATASET_NAME"
+
+echo ""
+echo "========================================"
+echo "Auto-starting extraction..."
+echo "========================================"
+echo ""
+
+exec ./scripts/extract.sh --dataset-name "$DATASET_NAME"

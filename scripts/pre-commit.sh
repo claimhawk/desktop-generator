@@ -51,3 +51,9 @@ printf '%s\n' "$py_targets" | xargs -r $ruff_cmd check
 
 echo "Running mypy (syntax & types) on ${scope_label}..."
 printf '%s\n' "$py_targets" | xargs -r $mypy_cmd
+
+echo "Generating documentation..."
+$python_bin -m pdoc --html --output-dir docs . --force 2>/dev/null || echo "Note: pdoc not installed, skipping docs"
+
+echo ""
+echo "✓ All checks passed!"
