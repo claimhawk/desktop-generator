@@ -16,7 +16,7 @@ from pathlib import Path
 from cudag.core import DatasetBuilder, DatasetConfig
 
 from renderer import DesktopRenderer
-from tasks import ClickDesktopIconTask, ClickTaskbarIconTask
+from tasks import ClickDesktopIconTask, ClickTaskbarIconTask, WaitLoadingTask
 
 
 def get_researcher_name() -> str | None:
@@ -62,18 +62,20 @@ def main() -> None:
     renderer = DesktopRenderer(assets_dir=Path("assets"))
     renderer.load_assets()
 
-    # Create tasks
+    # Create tasks - each task type generates its own samples
+    # Note: tasks receive task-specific config dict, not DatasetConfig
     tasks = [
-        ClickDesktopIconTask(config=config, renderer=renderer),
-        ClickTaskbarIconTask(config=config, renderer=renderer),
+        ClickDesktopIconTask(config={}, renderer=renderer),
+        ClickTaskbarIconTask(config={}, renderer=renderer),
+        WaitLoadingTask(config={}, renderer=renderer),
     ]
 
     # Build dataset
     builder = DatasetBuilder(config=config, tasks=tasks)
     output_dir = builder.build()
 
-    # Build evals
-    builder.build_evals()
+    # Build tests
+    builder.build_tests()
 
     print(f"\nDataset generated at: {output_dir}")
 

@@ -3,24 +3,36 @@
 name_prefix: desktop
 seed: 42
 
-# Task counts - how many samples of each type
+# Task counts - number of SCREENS to generate per task type
+# click-desktop-icon: Desktop icon clicks (each screen has 3-7 desktop icons)
+# click-taskbar-icon: Taskbar icon clicks (each screen has 1-3 taskbar icons)
+# wait-loading: Wait when OD loading panel is visible
 tasks:
   click-desktop-icon: 100
   click-taskbar-icon: 100
+  wait-loading: 50
 
 # Train/test split
 splits:
   train: 0.9
 
 # System prompt style: "osworld" or "compact"
-system_prompt: compact
+system_prompt: osworld
 
 # Output settings
 output:
   image_format: jpg
   image_quality: 85
 
-# Evaluation settings
-evals:
+# Test settings (held-out evaluation data)
+test:
   count: 100
   tolerance: 10
+
+# Annotation settings
+annotation:
+  enabled: true
+  per_type:
+    click-desktop-icon: 3
+    click-taskbar-icon: 3
+    wait-loading: 3

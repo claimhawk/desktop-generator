@@ -33,13 +33,16 @@ class DesktopScreen(Screen):
     # Date/time area in bottom-right of taskbar
     datetime_area = region((1840, 1050, 80, 30))
 
+    # OD Loading panel (centered on screen when visible)
+    od_loading_panel = region((708, 365, 502, 304))
+
     def render(self, state: Any) -> tuple[Any, dict[str, Any]]:
         """Render is handled by the Renderer class."""
         raise NotImplementedError("Use DesktopRenderer instead")
 
 
 # Icon metadata - desktop icons with labels
-DESKTOP_ICONS = {
+DESKTOP_ICONS: dict[str, dict[str, Any]] = {
     "od": {"file": "desktop/icon-od-clean.png", "label": "Open Dental", "required": True},
     "pms": {"file": "desktop/icon-pms-clean.png", "label": "PMS", "required": True},
     "chrome": {"file": "desktop/icon-chrome-clean.png", "label": "Chrome"},
@@ -50,10 +53,10 @@ DESKTOP_ICONS = {
 }
 
 # Taskbar icons - no labels
-TASKBAR_ICONS = {
+TASKBAR_ICONS: dict[str, dict[str, Any]] = {
     "explorer": {"file": "taskbar/icon-tb-explorer.png"},
     "edge": {"file": "taskbar/icon-tb-edge.png"},
-    "od": {"file": "taskbar/icon-tb-od.png"},
+    "od": {"file": "taskbar/icon-tb-od.png", "required": True},
 }
 
 # Layout constants
@@ -69,3 +72,10 @@ TASKBAR_LEFT_MARGIN = 946  # After start button and search bar (946px from left)
 TASKBAR_Y_OFFSET = 1042  # Top of taskbar icons (1039+3px)
 
 DATETIME_FONT_SIZE = 9
+
+# OD Loading panel (centered overlay when visible)
+OD_LOADING_PANEL: dict[str, Any] = {
+    "file": "panels/od-loading.png",
+    "position": (708, 365),  # Centered on 1920x1080 desktop
+    "size": (502, 304),
+}

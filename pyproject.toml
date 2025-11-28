@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "test-desktop-generator"
+name = "desktop-generator"
 version = "0.1.0"
-description = "CUDAG project for test-desktop-generator"
+description = "CUDAG project for desktop screenshots"
 requires-python = ">=3.11"
 dependencies = [
     "cudag",
@@ -16,7 +16,11 @@ dependencies = [
 dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "types-PyYAML>=6.0.0",
 ]
+
+[tool.uv.sources]
+cudag = { path = "../../cudag", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]

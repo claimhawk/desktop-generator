@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
+from PIL.ImageFont import FreeTypeFont
 
 from cudag.core import BaseRenderer
 
@@ -15,6 +16,7 @@ from screen import (
     DATETIME_FONT_SIZE,
     DESKTOP_ICONS,
     DesktopScreen,
+    OD_LOADING_PANEL,
     TASKBAR_ICONS,
 )
 from state import DesktopState, IconPlacement
@@ -40,8 +42,9 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
         """
         # Initialize attributes BEFORE super().__init__() since it calls load_assets()
         self._icon_cache: dict[str, Image.Image] = {}
-        self._font: ImageFont.FreeTypeFont | None = None
-        self._datetime_font: ImageFont.FreeTypeFont | None = None
+        self._font: FreeTypeFont | ImageFont.ImageFont | None = None
+        self._datetime_font: FreeTypeFont | ImageFont.ImageFont | None = None
+        self._od_loading_panel: Image.Image | None = None
         super().__init__(assets_dir)
 
     def load_assets(self) -> None:
@@ -71,6 +74,11 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
                 if icon_path.exists():
                     self._icon_cache[f"taskbar_{icon_id}"] = Image.open(icon_path).convert("RGBA")
 
+        # Load OD loading panel
+        panel_path = self.asset_path(OD_LOADING_PANEL["file"])
+        if panel_path.exists():
+            self._od_loading_panel = Image.open(panel_path).convert("RGBA")
+
     def render(self, state: DesktopState) -> tuple[Image.Image, dict[str, Any]]:
         """Render the desktop with icons and datetime.
 
@@ -94,6 +102,10 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
 
         # Draw datetime
         self._draw_datetime(draw, state)
+
+        # Draw OD loading panel if visible (overlays everything)
+        if state.od_loading_visible:
+            self._draw_od_loading_panel(image)
 
         # Convert back to RGB for saving
         final_image = image.convert("RGB")
@@ -167,3 +179,14 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
             text_width = bbox[2] - bbox[0]
             text_x = x - text_width // 2
             draw.text((text_x, line_y), line, fill="black", font=self._datetime_font)
+
+    def _draw_od_loading_panel(self, image: Image.Image) -> None:
+        """Draw the OD Loading splash panel centered on screen."""
+        if self._od_loading_panel is None:
+            return
+
+        # Get panel position from config
+        x, y = OD_LOADING_PANEL["position"]
+
+        # Paste panel with alpha channel
+        image.paste(self._od_loading_panel, (x, y), self._od_loading_panel)

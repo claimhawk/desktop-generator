@@ -63,6 +63,7 @@ class DesktopState(BaseState):
     - Desktop icons with their positions and labels
     - Taskbar icons with their positions
     - DateTime text and position
+    - OD Loading panel visibility
     """
 
     desktop_icons: list[IconPlacement] = field(default_factory=list)
@@ -77,12 +78,16 @@ class DesktopState(BaseState):
     datetime_position: tuple[int, int] = (0, 0)
     """Position of datetime text (x, y)."""
 
+    od_loading_visible: bool = False
+    """Whether the OD Loading splash panel is visible."""
+
     @classmethod
     def generate(
         cls,
         rng: Any,
         num_desktop_icons: int = 5,
         num_taskbar_icons: int = 3,
+        od_loading_visible: bool = False,
     ) -> "DesktopState":
         """Generate a random desktop state.
 
@@ -90,11 +95,13 @@ class DesktopState(BaseState):
             rng: Random number generator
             num_desktop_icons: Number of icons to place on desktop (min 2 for od/pms)
             num_taskbar_icons: Number of icons to place on taskbar
+            od_loading_visible: Whether the OD Loading splash panel is visible
 
         Returns:
             DesktopState with randomized icon placement
         """
         state = cls()
+        state.od_loading_visible = od_loading_visible
 
         # Generate datetime
         state.datetime_text = cls._generate_datetime(rng)
@@ -191,7 +198,7 @@ class DesktopState(BaseState):
             selected_cells.sort(key=lambda c: (c[0], c[1]))
 
             for (col, row), icon_id in zip(selected_cells, icon_ids):
-                x = start_x + col * DESKTOP_CELL_WIDTH * 1.5  # Extra spacing
+                x = int(start_x + col * DESKTOP_CELL_WIDTH * 1.5)  # Extra spacing
                 y = start_y + row * DESKTOP_CELL_HEIGHT
                 icon_info = DESKTOP_ICONS[icon_id]
                 placements.append(
@@ -249,12 +256,21 @@ class DesktopState(BaseState):
         """Place icons on the taskbar.
 
         Icons are placed left to right with consistent gaps.
+        Open Dental is always included.
         """
         placements: list[IconPlacement] = []
 
-        # Get available taskbar icons and select randomly
-        icon_ids = list(TASKBAR_ICONS.keys())
-        selected = rng.sample(icon_ids, min(num_icons, len(icon_ids)))
+        # Get available taskbar icons - required ones first
+        required = [k for k, v in TASKBAR_ICONS.items() if v.get("required")]
+        optional = [k for k in TASKBAR_ICONS if k not in required]
+
+        # Build icon list: required + random selection from optional
+        num_optional = max(0, num_icons - len(required))
+        selected_optional = rng.sample(optional, min(num_optional, len(optional)))
+        selected = required + selected_optional
+
+        # Shuffle the order
+        rng.shuffle(selected)
 
         # Calculate positions - left to right at specified y offset
         x = TASKBAR_LEFT_MARGIN
@@ -322,4 +338,5 @@ class DesktopState(BaseState):
                 "text": self.datetime_text,
                 "position": self.datetime_position,
             },
+            "od_loading_visible": self.od_loading_visible,
         }

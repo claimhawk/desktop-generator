@@ -6,5 +6,6 @@
 
 from tasks.click_desktop_icon import ClickDesktopIconTask
 from tasks.click_taskbar_icon import ClickTaskbarIconTask
+from tasks.wait_loading import WaitLoadingTask
 
-__all__ = ["ClickDesktopIconTask", "ClickTaskbarIconTask"]
+__all__ = ["ClickDesktopIconTask", "ClickTaskbarIconTask", "WaitLoadingTask"]

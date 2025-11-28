@@ -4,7 +4,7 @@
 
 """Task for clicking Open Dental taskbar icon."""
 
-from cudag.core import BaseTask, EvalCase, TaskContext, TaskSample
+from cudag.core import BaseTask, TaskContext, TaskSample, TestCase
 from cudag.prompts.tools import ToolCall
 
 from state import DesktopState
@@ -73,12 +73,12 @@ class ClickTaskbarIconTask(BaseTask):
         """Generate a single sample for Open Dental taskbar icon."""
         return self.generate_samples(ctx)[0]
 
-    def generate_evals(self, ctx: TaskContext) -> list[EvalCase]:
-        """Generate eval case for Open Dental taskbar icon."""
+    def generate_tests(self, ctx: TaskContext) -> list[TestCase]:
+        """Generate test case for Open Dental taskbar icon."""
         samples = self.generate_samples(ctx)
         return [
-            EvalCase(
-                eval_id=f"eval_{ctx.index:04d}_taskbar_od",
+            TestCase(
+                test_id=f"test_{ctx.index:04d}_taskbar_od",
                 screenshot=s.image_path,
                 prompt=s.human_prompt,
                 expected_action=s.tool_call.to_dict(),
@@ -89,6 +89,6 @@ class ClickTaskbarIconTask(BaseTask):
             for s in samples
         ]
 
-    def generate_eval(self, ctx: TaskContext) -> EvalCase:
-        """Generate a single eval case."""
-        return self.generate_evals(ctx)[0]
+    def generate_test(self, ctx: TaskContext) -> TestCase:
+        """Generate a single test case."""
+        return self.generate_tests(ctx)[0]
