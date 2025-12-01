@@ -36,3 +36,21 @@ python generate.py --config config/dataset.yaml
 4. Add domain models in `models/` for data generation
 5. Add tasks in `tasks/` for each interaction type
 6. Configure dataset.yaml with sample counts
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes:
+   - Generalize hardcoded values rather than replacing them with your own
+   - Add tests for new functionality
+   - Ensure all quality checks pass
+4. Submit a pull request
+
+**Code quality requirements:**
+- Lexical complexity checks
+- Syntax linting
+- Code formatting
+- Copyright headers
+
+AI-assisted code is welcome provided it includes tests and passes all checks.
