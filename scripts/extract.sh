@@ -45,7 +45,7 @@ CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
 if [[ -d "$CUDAG_DIR" ]]; then
     CUDAG_PATH=$(uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -c "import cudag.modal_apps.extract as e; print(e.__file__)")
 else
-    CUDAG_PATH=$(uvx --with cudag python -c "import cudag.modal_apps.extract as e; print(e.__file__)")
+    CUDAG_PATH=$(uv run python -c "import cudag.modal_apps.extract as e; print(e.__file__)")
 fi
 uvx modal run "$CUDAG_PATH" --dataset-name "$DATASET_NAME"
 

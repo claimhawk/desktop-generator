@@ -47,9 +47,9 @@ if [[ -d "$CUDAG_DIR" ]]; then
 else
     # Production: use cudag from PyPI
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
-        uvx --with cudag --with pillow python generator.py "${EXTRA_ARGS[@]}"
+        uv run python generator.py "${EXTRA_ARGS[@]}"
     else
-        uvx --with cudag --with pillow python generator.py
+        uv run python generator.py
     fi
 fi
 

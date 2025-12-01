@@ -55,7 +55,7 @@ echo "Uploading to Modal volume..."
 if [[ -d "$CUDAG_DIR" ]]; then
     uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -m cudag.modal_apps.upload "$DATASET_DIR"
 else
-    uvx --with cudag python -m cudag.modal_apps.upload "$DATASET_DIR"
+    uv run python -m cudag.modal_apps.upload "$DATASET_DIR"
 fi
 
 echo ""
