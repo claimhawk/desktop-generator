@@ -20,7 +20,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-cudag = { path = "../../cudag", editable = true }
+cudag = { path = "../cudag", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]

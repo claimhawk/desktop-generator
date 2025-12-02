@@ -2,83 +2,80 @@
 # Derivative works may be released by researchers,
 # but original files may not be redistributed or used beyond research purposes.
 
-"""Task for clicking Open Dental taskbar icon."""
+"""Task for clicking taskbar icons.
+
+Generates one screen, then creates click tasks for ALL taskbar icons on it.
+"""
 
 from cudag.core import BaseTask, TaskContext, TaskSample, TestCase
 from cudag.prompts.tools import ToolCall
 
+from screen import TASKBAR_ICONS
 from state import DesktopState
 
 
 class ClickTaskbarIconTask(BaseTask):
-    """Click Open Dental icon in the taskbar.
+    """Click any taskbar icon.
 
-    Renders a desktop with randomized taskbar icons (always includes Open Dental)
-    and generates a sample to click the OD taskbar icon.
+    Renders a desktop with randomized icons and generates click samples
+    for ALL visible taskbar icons (1:N image-to-samples pattern).
     """
 
     task_type = "click-taskbar-icon"
 
     def generate_samples(self, ctx: TaskContext) -> list[TaskSample]:
-        """Generate click sample for Open Dental taskbar icon."""
-        # Generate random state - must include OD in taskbar
+        """Generate click samples for ALL taskbar icons on one screen."""
+        # Generate random state with taskbar icons
         state = DesktopState.generate(
             rng=ctx.rng,
             num_desktop_icons=ctx.rng.randint(3, 7),
             num_taskbar_icons=ctx.rng.randint(2, 3),
         )
 
-        # Ensure Open Dental is in taskbar (re-generate if needed)
-        while state.get_taskbar_icon_by_id("od") is None:
-            state = DesktopState.generate(
-                rng=ctx.rng,
-                num_desktop_icons=ctx.rng.randint(3, 7),
-                num_taskbar_icons=ctx.rng.randint(2, 3),
-            )
-
-        # Render once
+        # Render once - this image is shared by all samples
         image, metadata = self.renderer.render(state)
         image_path = self.save_image(image, ctx)
 
-        # Find the Open Dental taskbar icon
-        od_icon = state.get_taskbar_icon_by_id("od")
-        if od_icon is None:
-            raise ValueError("Open Dental icon not found in taskbar")
+        samples: list[TaskSample] = []
 
-        # Build natural language prompt
-        prompt = "Click on Open Dental in the taskbar."
+        # Create a sample for EACH taskbar icon
+        for icon in state.taskbar_icons:
+            icon_info = TASKBAR_ICONS.get(icon.icon_id, {})
+            label = icon_info.get("label", icon.icon_id)
 
-        # Click center of icon
-        click_x, click_y = od_icon.center
+            prompt = f"Click on {label} in the taskbar."
+            click_x, click_y = icon.center
 
-        sample = TaskSample(
-            id=self.build_id(ctx, "_tb_od"),
-            image_path=image_path,
-            human_prompt=prompt,
-            tool_call=ToolCall.left_click((click_x, click_y)),
-            pixel_coords=(click_x, click_y),
-            metadata={
-                "task_type": self.task_type,
-                "icon_id": "od",
-                "icon_label": "Open Dental",
-                "icon_bounds": od_icon.bounds,
-                "ground_truth": state.to_ground_truth(),
-            },
-            image_size=image.size,
-        )
+            samples.append(
+                TaskSample(
+                    id=self.build_id(ctx, f"_tb_{icon.icon_id}"),
+                    image_path=image_path,
+                    human_prompt=prompt,
+                    tool_call=ToolCall.left_click((click_x, click_y)),
+                    pixel_coords=(click_x, click_y),
+                    metadata={
+                        "task_type": self.task_type,
+                        "icon_id": icon.icon_id,
+                        "icon_label": label,
+                        "icon_bounds": icon.bounds,
+                        "ground_truth": state.to_ground_truth(),
+                    },
+                    image_size=image.size,
+                )
+            )
 
-        return [sample]
+        return samples
 
     def generate_sample(self, ctx: TaskContext) -> TaskSample:
-        """Generate a single sample for Open Dental taskbar icon."""
+        """Generate samples - returns first but typically use generate_samples."""
         return self.generate_samples(ctx)[0]
 
     def generate_tests(self, ctx: TaskContext) -> list[TestCase]:
-        """Generate test case for Open Dental taskbar icon."""
+        """Generate test cases for ALL taskbar icons on one screen."""
         samples = self.generate_samples(ctx)
         return [
             TestCase(
-                test_id=f"test_{ctx.index:04d}_taskbar_od",
+                test_id=f"test_{ctx.index:04d}_taskbar_{s.metadata['icon_id']}",
                 screenshot=s.image_path,
                 prompt=s.human_prompt,
                 expected_action=s.tool_call.to_dict(),

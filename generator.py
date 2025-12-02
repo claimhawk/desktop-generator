@@ -5,18 +5,20 @@
 """Dataset generator for Windows 11 desktop screenshots.
 
 Usage:
-    python -m generator
-    python -m generator --config config/dataset.yaml
+    ./scripts/generate.sh              # Full pipeline: generate + upload + preprocess
+    ./scripts/generate.sh --dry        # Generate only, no upload
+
+DO NOT run generator.py directly - use scripts/generate.sh instead!
 """
 
 import argparse
 from datetime import datetime
 from pathlib import Path
 
-from cudag.core import DatasetBuilder, DatasetConfig
+from cudag.core import DatasetBuilder, DatasetConfig, check_script_invocation
 
 from renderer import DesktopRenderer
-from tasks import ClickDesktopIconTask, ClickTaskbarIconTask, WaitLoadingTask
+from tasks import ClickIconTask, WaitLoadingTask
 
 
 def get_researcher_name() -> str | None:
@@ -32,6 +34,8 @@ def get_researcher_name() -> str | None:
 
 def main() -> None:
     """Run dataset generation."""
+    check_script_invocation()
+
     parser = argparse.ArgumentParser(description="Generate desktop dataset")
     parser.add_argument(
         "--config",
@@ -62,11 +66,10 @@ def main() -> None:
     renderer = DesktopRenderer(assets_dir=Path("assets"))
     renderer.load_assets()
 
-    # Create tasks - each task type generates its own samples
+    # Create tasks - ClickIconTask generates samples for ALL icons per image (1:N)
     # Note: tasks receive task-specific config dict, not DatasetConfig
     tasks = [
-        ClickDesktopIconTask(config={}, renderer=renderer),
-        ClickTaskbarIconTask(config={}, renderer=renderer),
+        ClickIconTask(config={}, renderer=renderer),
         WaitLoadingTask(config={}, renderer=renderer),
     ]
 

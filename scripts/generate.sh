@@ -33,24 +33,14 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo ""
 fi
 
-# Find cudag directory (relative to this project for local dev)
-CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
+# Run the dataset generation using uv run (uses pyproject.toml dependencies)
+# Set env var so generator.py knows it was called from this script
+export CUDAG_FROM_SCRIPT=1
 
-# Run the dataset generation
-if [[ -d "$CUDAG_DIR" ]]; then
-    # Local development: use cudag from file path (--refresh to pick up changes)
-    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
-        uvx --refresh --with "cudag @ file://$CUDAG_DIR" --with pillow python generator.py "${EXTRA_ARGS[@]}"
-    else
-        uvx --refresh --with "cudag @ file://$CUDAG_DIR" --with pillow python generator.py
-    fi
+if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+    uv run python generator.py "${EXTRA_ARGS[@]}"
 else
-    # Production: use cudag from PyPI
-    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
-        uv run python generator.py "${EXTRA_ARGS[@]}"
-    else
-        uv run python generator.py
-    fi
+    uv run python generator.py
 fi
 
 if [[ $? -ne 0 ]]; then

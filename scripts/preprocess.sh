@@ -38,15 +38,8 @@ echo ""
 echo "Dataset: $DATASET_NAME"
 echo ""
 
-# Find cudag directory for local dev
-CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
-
 # Find cudag's preprocess.py location and run via Modal
-if [[ -d "$CUDAG_DIR" ]]; then
-    CUDAG_PATH=$(uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -c "import cudag.modal_apps.preprocess as p; print(p.__file__)")
-else
-    CUDAG_PATH=$(uv run python -c "import cudag.modal_apps.preprocess as p; print(p.__file__)")
-fi
+CUDAG_PATH=$(uvx --with cudag python -c "import cudag.modal_apps.preprocess as p; print(p.__file__)")
 uvx modal run --detach "$CUDAG_PATH" --dataset-name "$DATASET_NAME"
 
 echo ""

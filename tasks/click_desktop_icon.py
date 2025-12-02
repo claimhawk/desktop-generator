@@ -2,7 +2,10 @@
 # Derivative works may be released by researchers,
 # but original files may not be redistributed or used beyond research purposes.
 
-"""Task for clicking Open Dental desktop icon."""
+"""Task for clicking desktop icons.
+
+Generates one screen, then creates click tasks for ALL desktop icons on it.
+"""
 
 from cudag.core import BaseTask, TaskContext, TaskSample, TestCase
 from cudag.prompts.tools import ToolCall
@@ -12,69 +15,67 @@ from state import DesktopState
 
 
 class ClickDesktopIconTask(BaseTask):
-    """Click Open Dental icon on the desktop.
+    """Click any desktop icon.
 
-    Renders a desktop with randomized icons (always includes Open Dental)
-    and generates a sample to click the OD icon.
+    Renders a desktop with randomized icons and generates click samples
+    for ALL visible desktop icons (1:N image-to-samples pattern).
     """
 
     task_type = "click-desktop-icon"
 
     def generate_samples(self, ctx: TaskContext) -> list[TaskSample]:
-        """Generate click sample for Open Dental desktop icon."""
-        # Generate random state with desktop icons (OD always included)
+        """Generate click samples for ALL desktop icons on one screen."""
+        # Generate random state with desktop icons
         state = DesktopState.generate(
             rng=ctx.rng,
             num_desktop_icons=ctx.rng.randint(3, 7),
             num_taskbar_icons=ctx.rng.randint(1, 3),
         )
 
-        # Render once
+        # Render once - this image is shared by all samples
         image, metadata = self.renderer.render(state)
         image_path = self.save_image(image, ctx)
 
-        # Find the Open Dental icon
-        od_icon = state.get_desktop_icon_by_id("od")
-        if od_icon is None:
-            raise ValueError("Open Dental icon not found in state")
+        samples: list[TaskSample] = []
 
-        icon_info = DESKTOP_ICONS.get("od", {})
-        label = icon_info.get("label", "Open Dental")
+        # Create a sample for EACH desktop icon
+        for icon in state.desktop_icons:
+            icon_info = DESKTOP_ICONS.get(icon.icon_id, {})
+            label = icon_info.get("label", icon.icon_id)
 
-        # Build natural language prompt
-        prompt = f"Click on the {label} icon on the desktop."
+            prompt = f"Double-click on the {label} icon on the desktop."
+            click_x, click_y = icon.center
 
-        # Click center of icon
-        click_x, click_y = od_icon.center
+            samples.append(
+                TaskSample(
+                    id=self.build_id(ctx, f"_{icon.icon_id}"),
+                    image_path=image_path,
+                    human_prompt=prompt,
+                    tool_call=ToolCall.double_click((click_x, click_y)),
+                    pixel_coords=(click_x, click_y),
+                    metadata={
+                        "task_type": self.task_type,
+                        "icon_id": icon.icon_id,
+                        "icon_label": label,
+                        "icon_bounds": icon.bounds,
+                        "ground_truth": state.to_ground_truth(),
+                    },
+                    image_size=image.size,
+                )
+            )
 
-        sample = TaskSample(
-            id=self.build_id(ctx, "_od"),
-            image_path=image_path,
-            human_prompt=prompt,
-            tool_call=ToolCall.left_click((click_x, click_y)),
-            pixel_coords=(click_x, click_y),
-            metadata={
-                "task_type": self.task_type,
-                "icon_id": "od",
-                "icon_label": label,
-                "icon_bounds": od_icon.bounds,
-                "ground_truth": state.to_ground_truth(),
-            },
-            image_size=image.size,
-        )
-
-        return [sample]
+        return samples
 
     def generate_sample(self, ctx: TaskContext) -> TaskSample:
-        """Generate a single sample for Open Dental desktop icon."""
+        """Generate samples - returns first but typically use generate_samples."""
         return self.generate_samples(ctx)[0]
 
     def generate_tests(self, ctx: TaskContext) -> list[TestCase]:
-        """Generate test case for Open Dental desktop icon."""
+        """Generate test cases for ALL desktop icons on one screen."""
         samples = self.generate_samples(ctx)
         return [
             TestCase(
-                test_id=f"test_{ctx.index:04d}_desktop_od",
+                test_id=f"test_{ctx.index:04d}_desktop_{s.metadata['icon_id']}",
                 screenshot=s.image_path,
                 prompt=s.human_prompt,
                 expected_action=s.tool_call.to_dict(),

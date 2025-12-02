@@ -5,7 +5,13 @@
 """Task definitions for desktop generator."""
 
 from tasks.click_desktop_icon import ClickDesktopIconTask
+from tasks.click_icon import ClickIconTask
 from tasks.click_taskbar_icon import ClickTaskbarIconTask
 from tasks.wait_loading import WaitLoadingTask
 
-__all__ = ["ClickDesktopIconTask", "ClickTaskbarIconTask", "WaitLoadingTask"]
+__all__ = [
+    "ClickDesktopIconTask",
+    "ClickTaskbarIconTask",
+    "ClickIconTask",
+    "WaitLoadingTask",
+]

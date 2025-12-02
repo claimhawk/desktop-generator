@@ -52,11 +52,11 @@ DESKTOP_ICONS: dict[str, dict[str, Any]] = {
     "trash": {"file": "desktop/icon-trash-clean.png", "label": "Recycle Bin"},
 }
 
-# Taskbar icons - no labels
+# Taskbar icons - no visible labels but we store label for prompts
 TASKBAR_ICONS: dict[str, dict[str, Any]] = {
-    "explorer": {"file": "taskbar/icon-tb-explorer.png"},
-    "edge": {"file": "taskbar/icon-tb-edge.png"},
-    "od": {"file": "taskbar/icon-tb-od.png", "required": True},
+    "explorer": {"file": "taskbar/icon-tb-explorer.png", "label": "File Explorer"},
+    "edge": {"file": "taskbar/icon-tb-edge.png", "label": "Microsoft Edge"},
+    "od": {"file": "taskbar/icon-tb-od.png", "label": "Open Dental", "required": True},
 }
 
 # Layout constants

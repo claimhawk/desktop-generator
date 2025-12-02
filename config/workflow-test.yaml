@@ -1,0 +1,17 @@
+# Small test config for workflow integration
+name_prefix: desktop-workflow-test
+seed: 42
+
+tasks:
+  click-desktop-icon: 2
+  wait-loading: 2
+
+splits:
+  train: 1.0
+
+output:
+  image_format: jpg
+  image_quality: 85
+
+test:
+  count: 0

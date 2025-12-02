@@ -47,16 +47,9 @@ if [[ "$DRY_RUN" == "true" ]]; then
     exit 0
 fi
 
-# Find cudag directory for local dev
-CUDAG_DIR="$(cd "$(dirname "$0")/../../../cudag" 2>/dev/null && pwd)"
-
 # Upload via Modal
 echo "Uploading to Modal volume..."
-if [[ -d "$CUDAG_DIR" ]]; then
-    uvx --refresh --with "cudag @ file://$CUDAG_DIR" python -m cudag.modal_apps.upload "$DATASET_DIR"
-else
-    uv run python -m cudag.modal_apps.upload "$DATASET_DIR"
-fi
+uvx --with cudag python -m cudag.modal_apps.upload "$DATASET_DIR"
 
 echo ""
 echo "Upload complete: $DATASET_NAME"
