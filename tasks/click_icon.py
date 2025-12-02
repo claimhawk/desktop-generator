@@ -76,14 +76,14 @@ class ClickIconTask(BaseTask):
             icon_info = TASKBAR_ICONS.get(icon.icon_id, {})
             label = icon_info.get("label", icon.icon_id)
 
-            prompt = f"Click on {label} in the taskbar."
+            prompt = f"Double-click on {label} in the taskbar."
             click_x, click_y = icon.center
 
             sample = TaskSample(
                 id=self.build_id(ctx, f"_taskbar_{icon.icon_id}"),
                 image_path=image_path,
                 human_prompt=prompt,
-                tool_call=ToolCall.left_click((click_x, click_y)),
+                tool_call=ToolCall.double_click((click_x, click_y)),
                 pixel_coords=(click_x, click_y),
                 metadata={
                     "task_type": "click-taskbar-icon",
@@ -155,7 +155,7 @@ class ClickIconTask(BaseTask):
             if icon.icon_id == "od":
                 icon_info = TASKBAR_ICONS.get(icon.icon_id, {})
                 label = icon_info.get("label", "Open Dental")
-                prompt = f"Click on the {label} icon in the taskbar."
+                prompt = f"Double-click on {label} in the taskbar."
                 click_x, click_y = icon.center
 
                 tests.append(
@@ -163,7 +163,7 @@ class ClickIconTask(BaseTask):
                         test_id=f"test_{ctx.index:04d}_taskbar_{icon.icon_id}",
                         screenshot=image_path,
                         prompt=prompt,
-                        expected_action=ToolCall.left_click((click_x, click_y)).to_dict(),
+                        expected_action=ToolCall.double_click((click_x, click_y)).to_dict(),
                         tolerance=(10, 10),  # Square icons: same x/y tolerance
                         metadata={
                             "task_type": "click-taskbar-icon",

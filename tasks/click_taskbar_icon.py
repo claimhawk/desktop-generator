@@ -43,7 +43,7 @@ class ClickTaskbarIconTask(BaseTask):
             icon_info = TASKBAR_ICONS.get(icon.icon_id, {})
             label = icon_info.get("label", icon.icon_id)
 
-            prompt = f"Click on {label} in the taskbar."
+            prompt = f"Double-click on {label} in the taskbar."
             click_x, click_y = icon.center
 
             samples.append(
@@ -51,7 +51,7 @@ class ClickTaskbarIconTask(BaseTask):
                     id=self.build_id(ctx, f"_tb_{icon.icon_id}"),
                     image_path=image_path,
                     human_prompt=prompt,
-                    tool_call=ToolCall.left_click((click_x, click_y)),
+                    tool_call=ToolCall.double_click((click_x, click_y)),
                     pixel_coords=(click_x, click_y),
                     metadata={
                         "task_type": self.task_type,
