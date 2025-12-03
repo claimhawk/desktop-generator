@@ -46,6 +46,10 @@ class ClickDesktopIconTask(BaseTask):
             prompt = f"Double-click on the {label} icon on the desktop."
             click_x, click_y = icon.center
 
+            # Tolerance based on icon bounds (x, y, width, height)
+            tol_x = icon.bounds[2] // 2
+            tol_y = icon.bounds[3] // 2
+
             samples.append(
                 TaskSample(
                     id=self.build_id(ctx, f"_{icon.icon_id}"),
@@ -59,6 +63,7 @@ class ClickDesktopIconTask(BaseTask):
                         "icon_label": label,
                         "icon_bounds": icon.bounds,
                         "ground_truth": state.to_ground_truth(),
+                        "tolerance": [tol_x, tol_y],
                     },
                     image_size=image.size,
                 )

@@ -55,6 +55,7 @@ class WaitLoadingTask(BaseTask):
                 "wait_seconds": wait_seconds,
                 "loading_panel": "od-loading",
                 "ground_truth": state.to_ground_truth(),
+                "tolerance": [0, 0],
             },
             image_size=image.size,
         )
