@@ -3,20 +3,10 @@
 name_prefix: desktop
 seed: 420
 
-# Task counts - number of IMAGES to generate per task type
-# click-icon: Each image generates click tasks for ALL icons (desktop + taskbar)
-#             ~5 desktop icons + ~2 taskbar icons = ~7 samples per image
-# wait-loading: Wait when OD loading panel is visible
-# 100 images = ~500 desktop-icon samples + ~200 taskbar-icon samples
 tasks:
-  click-icon: 500
+  click-icon: 1000
   wait-loading: 100
 
-# Task distributions - distribution of sample types within each task
-# Desktop tasks target specific UI elements, so no adversarial cases needed.
-# task_distributions:
-#   click-desktop-icon:
-#     normal: 1.0
 
 # Train/val split
 splits:
