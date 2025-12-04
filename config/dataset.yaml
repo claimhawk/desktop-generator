@@ -18,12 +18,9 @@ tasks:
 #   click-desktop-icon:
 #     normal: 1.0
 
-# Train/test split
+# Train/val split
 splits:
   train: 0.9
-
-# System prompt style: "osworld" or "compact"
-system_prompt: osworld
 
 # Output settings
 output:
@@ -31,9 +28,10 @@ output:
   image_quality: 85
 
 # Test settings (held-out evaluation data)
+# Test count is always 100, generated pro-rata across task types
+# Tolerance is defined per-task in each task's generate_tests() method
 test:
   count: 100
-  tolerance: 10
 
 # Annotation settings
 annotation:
