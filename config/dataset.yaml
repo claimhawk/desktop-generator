@@ -1,7 +1,7 @@
 # Dataset configuration for desktop-generator
 
 name_prefix: desktop
-seed: 42
+seed: 420
 
 # Task counts - number of IMAGES to generate per task type
 # click-icon: Each image generates click tasks for ALL icons (desktop + taskbar)
