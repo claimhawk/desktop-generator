@@ -9,8 +9,8 @@ seed: 420
 # wait-loading: Wait when OD loading panel is visible
 # 100 images = ~500 desktop-icon samples + ~200 taskbar-icon samples
 tasks:
-  click-icon: 100
-  wait-loading: 50
+  click-icon: 500
+  wait-loading: 100
 
 # Task distributions - distribution of sample types within each task
 # Desktop tasks target specific UI elements, so no adversarial cases needed.
@@ -20,7 +20,7 @@ tasks:
 
 # Train/val split
 splits:
-  train: 0.9
+  train: 0.8
 
 # Output settings
 output:
@@ -35,7 +35,7 @@ test:
 
 # Annotation settings
 annotation:
-  enabled: true
+  enabled: false
   per_type:
     click-desktop-icon: 3
     click-taskbar-icon: 3
