@@ -1,4 +1,6 @@
 # Copyright (c) 2025 Tylt LLC. All rights reserved.
+# Licensed for research use only. Commercial use requires a license from Tylt LLC.
+# Contact: hello@claimhawk.app | See LICENSE for terms.
 
 """Workflow integration for single screen generation.
 
