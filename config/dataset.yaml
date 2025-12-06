@@ -4,7 +4,7 @@ name_prefix: desktop
 seed: 420
 
 tasks:
-  iconlist: 1000
+  iconlist: 2000
   wait-loading: 100
 
 
