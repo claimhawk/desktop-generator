@@ -2,16 +2,17 @@
 # Licensed for research use only. Commercial use requires a license from Tylt LLC.
 # Contact: hello@claimhawk.app | See LICENSE for terms.
 
-"""Task definitions for desktop generator."""
+"""Task definitions for desktop generator.
 
-from tasks.click_desktop_icon import ClickDesktopIconTask
-from tasks.click_icon import ClickIconTask
-from tasks.click_taskbar_icon import ClickTaskbarIconTask
+Tasks are driven by annotation.json:
+- IconListTask: generates samples for tasks targeting iconlist elements
+- WaitLoadingTask: generates wait samples when loading element is visible
+"""
+
+from tasks.iconlist_task import IconListTask
 from tasks.wait_loading import WaitLoadingTask
 
 __all__ = [
-    "ClickDesktopIconTask",
-    "ClickTaskbarIconTask",
-    "ClickIconTask",
+    "IconListTask",
     "WaitLoadingTask",
 ]

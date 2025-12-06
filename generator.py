@@ -16,7 +16,7 @@ from pathlib import Path
 from cudag import run_generator
 
 from renderer import DesktopRenderer
-from tasks import ClickIconTask, WaitLoadingTask
+from tasks import IconListTask, WaitLoadingTask
 
 
 def main() -> None:
@@ -24,9 +24,9 @@ def main() -> None:
     renderer = DesktopRenderer(assets_dir=Path("assets"))
     renderer.load_assets()
 
-    # ClickIconTask generates samples for ALL icons per image (1:N)
+    # IconListTask generates samples for ALL icons per image (1:N)
     tasks = [
-        ClickIconTask(config={}, renderer=renderer),
+        IconListTask(config={}, renderer=renderer),
         WaitLoadingTask(config={}, renderer=renderer),
     ]
 

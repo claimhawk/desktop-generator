@@ -2,8 +2,14 @@
 # Licensed for research use only. Commercial use requires a license from Tylt LLC.
 # Contact: hello@claimhawk.app | See LICENSE for terms.
 
-"""Renderer for Windows 11 desktop generator."""
+"""Renderer for Windows 11 desktop generator.
 
+Uses masked.png from assets/annotations as the base image.
+Icon positions and labels come from annotation.json.
+"""
+
+import base64
+import io
 from pathlib import Path
 from typing import Any
 
@@ -13,11 +19,10 @@ from PIL.ImageFont import FreeTypeFont
 from cudag.core import BaseRenderer
 
 from screen import (
+    ANNOTATION_CONFIG,
     DATETIME_FONT_SIZE,
-    DESKTOP_ICONS,
     DesktopScreen,
     OD_LOADING_PANEL,
-    TASKBAR_ICONS,
 )
 from state import DesktopState, IconPlacement
 
@@ -26,10 +31,12 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
     """Renders the Windows 11 desktop screen.
 
     Composites:
-    - Base blank desktop image
+    - Base masked image (from annotations/masked.png)
     - Desktop icons with labels
     - Taskbar icons (no labels)
     - DateTime text in bottom-right
+
+    Icon images are loaded from assets/icons/ directory.
     """
 
     screen_class = DesktopScreen
@@ -44,7 +51,8 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
         self._icon_cache: dict[str, Image.Image] = {}
         self._font: FreeTypeFont | ImageFont.ImageFont | None = None
         self._datetime_font: FreeTypeFont | ImageFont.ImageFont | None = None
-        self._od_loading_panel: Image.Image | None = None
+        self._loading_panel: Image.Image | None = None
+        self._loading_position: tuple[int, int] = (0, 0)
         super().__init__(assets_dir)
 
     def load_assets(self) -> None:
@@ -59,25 +67,130 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
             self._font = ImageFont.load_default()
             self._datetime_font = ImageFont.load_default()
 
-        # Pre-load all icon images
+        # Pre-load all icon images from icons directory
+        # Icons are named by their snake_case id (matching annotation labels)
         icons_dir = self.asset_path("icons")
         if icons_dir.exists():
-            # Load desktop icons
-            for icon_id, info in DESKTOP_ICONS.items():
-                icon_path = icons_dir / info["file"]
-                if icon_path.exists():
-                    self._icon_cache[f"desktop_{icon_id}"] = Image.open(icon_path).convert("RGBA")
+            # Load all desktop icons
+            desktop_dir = icons_dir / "desktop"
+            if desktop_dir.exists():
+                for icon_path in desktop_dir.glob("*.png"):
+                    # Extract icon_id from filename (e.g., icon-od-clean.png -> od)
+                    icon_id = self._extract_icon_id(icon_path.stem)
+                    self._icon_cache[f"desktop_{icon_id}"] = (
+                        Image.open(icon_path).convert("RGBA")
+                    )
 
-            # Load taskbar icons
-            for icon_id, info in TASKBAR_ICONS.items():
-                icon_path = icons_dir / info["file"]
-                if icon_path.exists():
-                    self._icon_cache[f"taskbar_{icon_id}"] = Image.open(icon_path).convert("RGBA")
+            # Load all taskbar icons
+            taskbar_dir = icons_dir / "taskbar"
+            if taskbar_dir.exists():
+                for icon_path in taskbar_dir.glob("*.png"):
+                    icon_id = self._extract_icon_id(icon_path.stem)
+                    self._icon_cache[f"taskbar_{icon_id}"] = (
+                        Image.open(icon_path).convert("RGBA")
+                    )
 
-        # Load OD loading panel
-        panel_path = self.asset_path(OD_LOADING_PANEL["file"])
-        if panel_path.exists():
-            self._od_loading_panel = Image.open(panel_path).convert("RGBA")
+        # Load loading panel from annotation base64 image
+        self._load_loading_panel_from_annotation()
+
+    def _load_loading_panel_from_annotation(self) -> None:
+        """Load loading panel from annotation's base64 image data."""
+        if ANNOTATION_CONFIG is None:
+            return
+
+        loading_el = ANNOTATION_CONFIG.get_loading_element()
+        if loading_el is None or not loading_el.loading_image:
+            # Fallback to file-based loading panel
+            panel_path = self.asset_path(OD_LOADING_PANEL["file"])
+            if panel_path.exists():
+                self._loading_panel = Image.open(panel_path).convert("RGBA")
+                self._loading_position = OD_LOADING_PANEL["position"]
+            return
+
+        # Parse base64 image data (format: data:image/png;base64,...)
+        base64_data = loading_el.loading_image
+        if base64_data.startswith("data:"):
+            # Strip data URL prefix
+            base64_data = base64_data.split(",", 1)[1]
+
+        image_bytes = base64.b64decode(base64_data)
+        self._loading_panel = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        self._loading_position = (loading_el.bbox[0], loading_el.bbox[1])
+
+    def _extract_icon_id(self, filename: str) -> str:
+        """Extract icon ID from filename.
+
+        Examples:
+            icon-od-clean -> od
+            icon-chrome-clean -> chrome
+            icon-tb-od -> od
+        """
+        # Remove common prefixes/suffixes
+        name = filename.lower()
+        for prefix in ("icon-", "icon_", "tb-", "tb_"):
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+        for suffix in ("-clean", "_clean"):
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
+        return name
+
+    # Map annotation labels to file-based icon IDs
+    _ICON_ALIASES: dict[str, str] = {
+        # Desktop icons: annotation label -> file ID
+        "open_dental": "od",
+        "google_chrome": "chrome",
+        "microsoft_edge": "edge",
+        "recycle_bin": "trash",
+        "acrobat_reader": "acrobat",
+        "od_zapata": "od",  # fallback to OD icon
+        "office_shsre": "office",
+        "brother_iprint": "brother",
+        "brother_utilities": "brother",
+        "brother_creative": "brother",
+        "pms_dental": "pms",
+        # Taskbar icons
+        "file_explorer": "explorer",
+    }
+
+    def _resolve_icon_key(self, prefix: str, icon_id: str) -> str | None:
+        """Resolve an icon_id to a cache key, trying aliases if needed.
+
+        Args:
+            prefix: 'desktop' or 'taskbar'
+            icon_id: The icon ID from state (may be annotation-based or file-based)
+
+        Returns:
+            Cache key if found, None otherwise
+        """
+        # Try direct lookup first
+        cache_key = f"{prefix}_{icon_id}"
+        if cache_key in self._icon_cache:
+            return cache_key
+
+        # Try alias mapping
+        alias = self._ICON_ALIASES.get(icon_id)
+        if alias:
+            cache_key = f"{prefix}_{alias}"
+            if cache_key in self._icon_cache:
+                return cache_key
+
+        return None
+
+    def load_base_image(self) -> Image.Image:
+        """Load the base image for rendering.
+
+        Uses masked.png from annotations if available, otherwise falls back
+        to the blank desktop image.
+        """
+        # Try to use masked image from annotations
+        if ANNOTATION_CONFIG and ANNOTATION_CONFIG.masked_image_path:
+            masked_path = ANNOTATION_CONFIG.masked_image_path
+            if masked_path.exists():
+                return Image.open(masked_path).convert("RGBA")
+
+        # Fallback to configured base image
+        return super().load_base_image()
 
     def render(self, state: DesktopState) -> tuple[Image.Image, dict[str, Any]]:
         """Render the desktop with icons and datetime.
@@ -103,9 +216,9 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
         # Draw datetime
         self._draw_datetime(draw, state)
 
-        # Draw OD loading panel if visible (overlays everything)
+        # Draw loading panel if visible (overlays everything)
         if state.od_loading_visible:
-            self._draw_od_loading_panel(image)
+            self._draw_loading_panel(image)
 
         # Convert back to RGB for saving
         final_image = image.convert("RGB")
@@ -123,8 +236,8 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
         icon: IconPlacement,
     ) -> None:
         """Draw a desktop icon with its label."""
-        cache_key = f"desktop_{icon.icon_id}"
-        if cache_key not in self._icon_cache:
+        cache_key = self._resolve_icon_key("desktop", icon.icon_id)
+        if cache_key is None:
             return
 
         icon_img = self._icon_cache[cache_key]
@@ -150,8 +263,8 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
         icon: IconPlacement,
     ) -> None:
         """Draw a taskbar icon (no label)."""
-        cache_key = f"taskbar_{icon.icon_id}"
-        if cache_key not in self._icon_cache:
+        cache_key = self._resolve_icon_key("taskbar", icon.icon_id)
+        if cache_key is None:
             return
 
         icon_img = self._icon_cache[cache_key]
@@ -180,13 +293,11 @@ class DesktopRenderer(BaseRenderer[DesktopState]):
             text_x = x - text_width // 2
             draw.text((text_x, line_y), line, fill="black", font=self._datetime_font)
 
-    def _draw_od_loading_panel(self, image: Image.Image) -> None:
-        """Draw the OD Loading splash panel centered on screen."""
-        if self._od_loading_panel is None:
+    def _draw_loading_panel(self, image: Image.Image) -> None:
+        """Draw the loading splash panel from annotation."""
+        if self._loading_panel is None:
             return
 
-        # Get panel position from config
-        x, y = OD_LOADING_PANEL["position"]
-
-        # Paste panel with alpha channel
-        image.paste(self._od_loading_panel, (x, y), self._od_loading_panel)
+        # Paste panel with alpha channel at position from annotation
+        x, y = self._loading_position
+        image.paste(self._loading_panel, (x, y), self._loading_panel)

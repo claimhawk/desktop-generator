@@ -2,11 +2,25 @@
 # Licensed for research use only. Commercial use requires a license from Tylt LLC.
 # Contact: hello@claimhawk.app | See LICENSE for terms.
 
-"""Screen definition for Windows 11 desktop generator."""
+"""Screen definition for Windows 11 desktop generator.
 
+Icon definitions and task templates are loaded from assets/annotations/annotation.json.
+To modify icons or prompts, edit the annotation file and regenerate.
+"""
+
+from pathlib import Path
 from typing import Any
 
+from cudag.annotation import AnnotationConfig
 from cudag.core import Screen, region
+
+
+# Load annotation config at module level
+_ANNOTATIONS_DIR = Path(__file__).parent / "assets" / "annotations"
+ANNOTATION_CONFIG: AnnotationConfig | None = None
+
+if _ANNOTATIONS_DIR.exists():
+    ANNOTATION_CONFIG = AnnotationConfig.load(_ANNOTATIONS_DIR)
 
 
 class DesktopScreen(Screen):
@@ -20,7 +34,7 @@ class DesktopScreen(Screen):
 
     class Meta:
         name = "desktop"
-        base_image = "blanks/desktop-blank.png"
+        base_image = "annotations/masked.png"  # Use masked image as base
         size = (1920, 1080)
         task_types = ["click-desktop-icon", "click-taskbar-icon"]
 
@@ -41,26 +55,103 @@ class DesktopScreen(Screen):
         raise NotImplementedError("Use DesktopRenderer instead")
 
 
-# Icon metadata - desktop icons with labels
-DESKTOP_ICONS: dict[str, dict[str, Any]] = {
-    "od": {"file": "desktop/icon-od-clean.png", "label": "Open Dental", "required": True},
-    "pms": {"file": "desktop/icon-pms-clean.png", "label": "PMS", "required": True},
-    "chrome": {"file": "desktop/icon-chrome-clean.png", "label": "Chrome"},
-    "edge": {"file": "desktop/icon-edge-clean.png", "label": "Edge"},
-    "ezdent": {"file": "desktop/icon-ezdent-clean.png", "label": "EZDent"},
-    "brother": {"file": "desktop/icon-brother-clean.png", "label": "Brother"},
-    "trash": {"file": "desktop/icon-trash-clean.png", "label": "Recycle Bin"},
+def get_desktop_icons() -> dict[str, dict[str, Any]]:
+    """Get desktop icons from annotation config.
+
+    Returns dict mapping icon_id to icon metadata including label.
+    The 'required' flag comes directly from the annotation.
+    """
+    if ANNOTATION_CONFIG is None:
+        return _FALLBACK_DESKTOP_ICONS
+
+    icons = ANNOTATION_CONFIG.get_labeled_icons("desktop")
+    result: dict[str, dict[str, Any]] = {}
+
+    for icon in icons:
+        # Create icon_id from label (snake_case)
+        icon_id = ANNOTATION_CONFIG.to_snake_case(icon.label)
+        result[icon_id] = {
+            "label": icon.label,
+            "center": icon.absolute_center,
+            # Use required flag from annotation
+            "required": icon.required,
+        }
+
+    return result
+
+
+def get_taskbar_icons() -> dict[str, dict[str, Any]]:
+    """Get taskbar icons from annotation config.
+
+    Returns dict mapping icon_file_id to icon metadata.
+    Only includes icons with icon_file_id set (those that map to actual image files).
+    Taskbar icons have no text labels - icon_file_id maps to image files (e.g., 'od' -> icon-tb-od.png).
+    The 'required' flag comes directly from the annotation.
+    """
+    if ANNOTATION_CONFIG is None:
+        return _FALLBACK_TASKBAR_ICONS
+
+    element = ANNOTATION_CONFIG.get_element_by_label("taskbar")
+    if element is None:
+        return _FALLBACK_TASKBAR_ICONS
+
+    result: dict[str, dict[str, Any]] = {}
+    for icon in element.icons:
+        # Only include icons with iconFileId set (maps to actual image files)
+        # Icons without iconFileId cannot be rendered
+        if icon.icon_file_id:
+            result[icon.icon_file_id] = {
+                "label": icon.icon_file_id,
+                "center": icon.absolute_center,
+                "required": icon.required,
+                "element_id": icon.element_id,
+            }
+
+    # If no icons with iconFileId, use fallback
+    if not result:
+        return _FALLBACK_TASKBAR_ICONS
+
+    return result
+
+
+def get_desktop_element() -> Any:
+    """Get the desktop iconlist element from annotation."""
+    if ANNOTATION_CONFIG is None:
+        return None
+    return ANNOTATION_CONFIG.get_element_by_label("desktop")
+
+
+def get_taskbar_element() -> Any:
+    """Get the taskbar iconlist element from annotation."""
+    if ANNOTATION_CONFIG is None:
+        return None
+    return ANNOTATION_CONFIG.get_element_by_label("taskbar")
+
+
+# Fallback icon definitions if annotation not available
+_FALLBACK_DESKTOP_ICONS: dict[str, dict[str, Any]] = {
+    "open_dental": {"label": "Open Dental", "required": True},
+    "pms": {"label": "PMS", "required": True},
+    "chrome": {"label": "Chrome"},
+    "edge": {"label": "Edge"},
 }
 
-# Taskbar icons - no visible labels but we store label for prompts
-TASKBAR_ICONS: dict[str, dict[str, Any]] = {
-    "explorer": {"file": "taskbar/icon-tb-explorer.png", "label": "File Explorer"},
-    "edge": {"file": "taskbar/icon-tb-edge.png", "label": "Microsoft Edge"},
-    "od": {"file": "taskbar/icon-tb-od.png", "label": "Open Dental", "required": True},
+_FALLBACK_TASKBAR_ICONS: dict[str, dict[str, Any]] = {
+    "explorer": {"label": "File Explorer"},
+    "edge": {"label": "Microsoft Edge"},
+    "od": {"label": "Open Dental", "required": True},
 }
 
-# Layout constants
-DESKTOP_ICON_SIZE = (54, 54)
+# Layout constants (from annotation if available)
+if ANNOTATION_CONFIG:
+    _desktop_el = get_desktop_element()
+    if _desktop_el and _desktop_el.icon_width:
+        DESKTOP_ICON_SIZE = (_desktop_el.icon_width, _desktop_el.icon_height)
+    else:
+        DESKTOP_ICON_SIZE = (50, 50)
+else:
+    DESKTOP_ICON_SIZE = (54, 54)
+
 DESKTOP_ICON_PADDING = 20
 DESKTOP_LABEL_HEIGHT = 20
 DESKTOP_CELL_WIDTH = DESKTOP_ICON_SIZE[0] + DESKTOP_ICON_PADDING
@@ -79,3 +170,7 @@ OD_LOADING_PANEL: dict[str, Any] = {
     "position": (708, 365),  # Centered on 1920x1080 desktop
     "size": (502, 304),
 }
+
+# Legacy exports for backwards compatibility
+DESKTOP_ICONS = get_desktop_icons()
+TASKBAR_ICONS = get_taskbar_icons()

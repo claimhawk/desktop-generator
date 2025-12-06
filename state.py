@@ -10,15 +10,18 @@ from typing import Any
 from cudag.core import BaseState
 
 from screen import (
+    ANNOTATION_CONFIG,
     DESKTOP_CELL_HEIGHT,
     DESKTOP_CELL_WIDTH,
     DESKTOP_ICON_SIZE,
-    DESKTOP_ICONS,
     TASKBAR_ICON_GAP,
     TASKBAR_ICON_SIZE,
-    TASKBAR_ICONS,
     TASKBAR_LEFT_MARGIN,
     TASKBAR_Y_OFFSET,
+    get_desktop_element,
+    get_desktop_icons,
+    get_taskbar_element,
+    get_taskbar_icons,
 )
 
 
@@ -103,9 +106,9 @@ class DesktopState(BaseState):
         state = cls()
         state.od_loading_visible = od_loading_visible
 
-        # Generate datetime
+        # Generate datetime - position from annotation text element
         state.datetime_text = cls._generate_datetime(rng)
-        state.datetime_position = (1868, 1043)  # Bottom-right of taskbar (+25px right total)
+        state.datetime_position = cls._get_datetime_position()
 
         # Place desktop icons
         state.desktop_icons = cls._place_desktop_icons(rng, num_desktop_icons)
@@ -114,6 +117,21 @@ class DesktopState(BaseState):
         state.taskbar_icons = cls._place_taskbar_icons(rng, num_taskbar_icons)
 
         return state
+
+    @classmethod
+    def _get_datetime_position(cls) -> tuple[int, int]:
+        """Get datetime position from annotation's text element."""
+        if ANNOTATION_CONFIG is None:
+            return (1868, 1043)  # Fallback position
+
+        # Find the datetime text element
+        datetime_el = ANNOTATION_CONFIG.get_element_by_label("datetime")
+        if datetime_el is None:
+            return (1868, 1043)
+
+        # Return center of the bbox for text alignment
+        x, y, w, h = datetime_el.bbox
+        return (x + w // 2, y)
 
     @classmethod
     def _generate_datetime(cls, rng: Any) -> str:
@@ -136,31 +154,51 @@ class DesktopState(BaseState):
         rng: Any,
         num_icons: int,
     ) -> list[IconPlacement]:
-        """Place icons on the desktop with random layout variation.
+        """Place icons on the desktop with layout variation.
 
-        Layout styles:
-        - stacked: tight grid, column-first
-        - sparse: scattered positions with gaps
-        - random: random positions within desktop area
+        Settings from annotation.json:
+        - varyN: if true, show random subset of icons
+        - randomOrder: if true, shuffle icon order
+        - layout: 'stacked', 'sparse', 'random', or empty for random choice
 
-        Open Dental and PMS are always included.
+        Icons with required=true are always included when varyN is enabled.
         """
         placements: list[IconPlacement] = []
 
+        # Get icons and element settings from annotation config
+        desktop_icons = get_desktop_icons()
+        element = get_desktop_element()
+
+        # Get annotation settings (with defaults)
+        vary_n = element.vary_n if element else True
+        random_order = element.random_order if element else True
+        layout = element.layout if element else ""
+
         # Get available icons - required ones first
-        required = [k for k, v in DESKTOP_ICONS.items() if v.get("required")]
-        optional = [k for k in DESKTOP_ICONS if k not in required]
+        required = [k for k, v in desktop_icons.items() if v.get("required")]
+        optional = [k for k in desktop_icons if k not in required]
 
-        # Build icon list: required + random selection from optional
-        num_optional = max(0, num_icons - len(required))
-        selected_optional = rng.sample(optional, min(num_optional, len(optional)))
-        icon_ids = required + selected_optional
+        # Build icon list based on varyN setting
+        if vary_n:
+            # VaryN enabled: required + 60-100% of optional icons
+            min_optional = int(len(optional) * 0.6)
+            max_optional = len(optional)
+            k = rng.randint(min_optional, max_optional)
+            selected_optional = rng.sample(optional, k)
+            icon_ids = required + selected_optional
+        else:
+            # VaryN disabled: show all icons up to num_icons
+            icon_ids = required + optional[:max(0, num_icons - len(required))]
 
-        # Shuffle the order (so required icons aren't always first)
-        rng.shuffle(icon_ids)
+        # Shuffle the order if randomOrder is enabled
+        if random_order:
+            rng.shuffle(icon_ids)
 
-        # Choose layout style randomly
-        layout_style = rng.choice(["stacked", "sparse", "random"])
+        # Choose layout style from annotation or randomly
+        if layout and layout in ("stacked", "sparse", "random"):
+            layout_style = layout
+        else:
+            layout_style = rng.choice(["stacked", "sparse", "random"])
 
         # Base positions
         start_x = 20
@@ -174,7 +212,7 @@ class DesktopState(BaseState):
                 row = i % max_rows
                 x = start_x + col * DESKTOP_CELL_WIDTH
                 y = start_y + row * DESKTOP_CELL_HEIGHT
-                icon_info = DESKTOP_ICONS[icon_id]
+                icon_info = desktop_icons[icon_id]
                 placements.append(
                     IconPlacement(
                         icon_id=icon_id,
@@ -200,7 +238,7 @@ class DesktopState(BaseState):
             for (col, row), icon_id in zip(selected_cells, icon_ids):
                 x = int(start_x + col * DESKTOP_CELL_WIDTH * 1.5)  # Extra spacing
                 y = start_y + row * DESKTOP_CELL_HEIGHT
-                icon_info = DESKTOP_ICONS[icon_id]
+                icon_info = desktop_icons[icon_id]
                 placements.append(
                     IconPlacement(
                         icon_id=icon_id,
@@ -233,7 +271,7 @@ class DesktopState(BaseState):
                         break
 
                 used_positions.append((x, y))
-                icon_info = DESKTOP_ICONS[icon_id]
+                icon_info = desktop_icons[icon_id]
                 placements.append(
                     IconPlacement(
                         icon_id=icon_id,
@@ -255,22 +293,42 @@ class DesktopState(BaseState):
     ) -> list[IconPlacement]:
         """Place icons on the taskbar.
 
-        Icons are placed left to right with consistent gaps.
-        Open Dental is always included.
+        Settings from annotation.json:
+        - varyN: if true, show random subset of icons
+        - randomOrder: if true, shuffle icon order
+        - layout: 'stacked' (for taskbar, this means linear left-to-right)
+
+        Icons with required=true are always included when varyN is enabled.
         """
         placements: list[IconPlacement] = []
 
+        # Get taskbar icons and element settings from annotation config
+        taskbar_icons = get_taskbar_icons()
+        element = get_taskbar_element()
+
+        # Get annotation settings (with defaults)
+        vary_n = element.vary_n if element else True
+        random_order = element.random_order if element else True
+
         # Get available taskbar icons - required ones first
-        required = [k for k, v in TASKBAR_ICONS.items() if v.get("required")]
-        optional = [k for k in TASKBAR_ICONS if k not in required]
+        required = [k for k, v in taskbar_icons.items() if v.get("required")]
+        optional = [k for k in taskbar_icons if k not in required]
 
-        # Build icon list: required + random selection from optional
-        num_optional = max(0, num_icons - len(required))
-        selected_optional = rng.sample(optional, min(num_optional, len(optional)))
-        selected = required + selected_optional
+        # Build icon list based on varyN setting
+        if vary_n:
+            # VaryN enabled: required + 40-100% of optional icons
+            min_optional = int(len(optional) * 0.4)
+            max_optional = len(optional)
+            k = rng.randint(min_optional, max_optional)
+            selected_optional = rng.sample(optional, k)
+            selected = required + selected_optional
+        else:
+            # VaryN disabled: show all icons up to num_icons
+            selected = required + optional[:max(0, num_icons - len(required))]
 
-        # Shuffle the order
-        rng.shuffle(selected)
+        # Shuffle the order if randomOrder is enabled
+        if random_order:
+            rng.shuffle(selected)
 
         # Calculate positions - left to right at specified y offset
         x = TASKBAR_LEFT_MARGIN
