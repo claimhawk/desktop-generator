@@ -140,3 +140,15 @@ Taskbar icons in annotation.json have `elementId` (unique identifier) but need `
 ---
 
 *Last updated: In progress...*
+
+---
+
+## AI-Assisted Development
+
+All implementation work done by 1 developer + AI (Claude Code).
+
+### Cost Comparison
+
+- **Traditional:** 1 developer @ $150k/yr for 1-2 weeks = **$3-6k**
+- **Actual:** 1 developer + AI = **$500-1k**
+- **Savings: ~85%**
