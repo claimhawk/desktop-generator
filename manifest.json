@@ -1,0 +1,306 @@
+{
+  "name": "desktop-generator",
+  "version": "1.0.0",
+  "description": "Generates Windows 11 desktop screenshots and training samples for vision-language models",
+  "api": {
+    "module": "api",
+    "entry_points": {
+      "generate_sample": {
+        "description": "Generate sample(s) for a given task type and state",
+        "params": {
+          "task_type": {
+            "type": "string",
+            "required": true,
+            "enum": ["iconlist", "wait-loading", "grounding"],
+            "description": "The task type to generate"
+          },
+          "state": {
+            "type": "DesktopState | null",
+            "required": false,
+            "default": null,
+            "description": "Screen state to render (generated automatically if null)"
+          },
+          "rng": {
+            "type": "Random | null",
+            "required": false,
+            "default": null,
+            "description": "Random number generator for reproducibility"
+          },
+          "element_label": {
+            "type": "string | null",
+            "required": false,
+            "default": null,
+            "description": "For grounding task: specific element to locate"
+          }
+        },
+        "returns": "GeneratedSample | list[GeneratedSample]",
+        "notes": "iconlist and wait-loading tasks return lists (multiple samples per image); grounding returns a single sample"
+      },
+      "generate_tasks": {
+        "description": "Generate samples for multiple task types in one call",
+        "params": {
+          "task_types": {
+            "type": "list[string]",
+            "required": true,
+            "description": "List of task types to generate"
+          },
+          "state_map": {
+            "type": "dict[string, tuple[DesktopState, dict]] | null",
+            "required": false,
+            "default": null,
+            "description": "Maps task_type to (state, kwargs) tuple; states generated if not provided"
+          },
+          "rng": {
+            "type": "Random | null",
+            "required": false,
+            "description": "Random number generator"
+          }
+        },
+        "returns": "list[GeneratedSample]"
+      }
+    }
+  },
+  "types": {
+    "IconPlacement": {
+      "description": "Placement info for a single icon",
+      "fields": {
+        "icon_id": {
+          "type": "string",
+          "required": true,
+          "description": "Icon identifier (e.g., 'open_dental', 'chrome', 'edge')"
+        },
+        "x": {
+          "type": "int",
+          "required": true,
+          "description": "X coordinate of icon top-left in pixels"
+        },
+        "y": {
+          "type": "int",
+          "required": true,
+          "description": "Y coordinate of icon top-left in pixels"
+        },
+        "width": {
+          "type": "int",
+          "required": true,
+          "description": "Icon width in pixels"
+        },
+        "height": {
+          "type": "int",
+          "required": true,
+          "description": "Icon height in pixels"
+        },
+        "label": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Display label text (for desktop icons)"
+        }
+      },
+      "computed_properties": {
+        "center": "tuple[int, int] - Center point of the icon (click target)",
+        "bounds": "tuple[int, int, int, int] - Bounding box as (x, y, width, height)"
+      }
+    },
+    "DesktopState": {
+      "description": "Input state for rendering a Windows 11 desktop screen",
+      "fields": {
+        "desktop_icons": {
+          "type": "list[IconPlacement]",
+          "required": false,
+          "default": [],
+          "description": "Icons placed on the desktop area"
+        },
+        "taskbar_icons": {
+          "type": "list[IconPlacement]",
+          "required": false,
+          "default": [],
+          "description": "Icons placed on the taskbar"
+        },
+        "datetime_text": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "DateTime string shown in bottom-right (e.g., '3:45 PM\\n12/15/2024')"
+        },
+        "datetime_position": {
+          "type": "tuple[int, int]",
+          "required": false,
+          "default": [0, 0],
+          "description": "Position of datetime text (x, y) in pixels"
+        },
+        "od_loading_visible": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Whether the Open Dental loading splash panel is visible"
+        }
+      },
+      "class_methods": {
+        "generate": {
+          "description": "Generate a random desktop state",
+          "params": {
+            "rng": "Random number generator",
+            "num_desktop_icons": "int (default 5) - Number of desktop icons",
+            "num_taskbar_icons": "int (default 3) - Number of taskbar icons",
+            "od_loading_visible": "bool (default False) - Show loading panel"
+          }
+        }
+      }
+    },
+    "GeneratedSample": {
+      "description": "Output from sample generation",
+      "fields": {
+        "task_type": {
+          "type": "string",
+          "description": "The task type (e.g., 'click-desktop-icon', 'wait-loading', 'grounding')"
+        },
+        "image": {
+          "type": "PIL.Image.Image",
+          "description": "Rendered screenshot (1920x1080 RGB)"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Human-readable task instruction"
+        },
+        "action": {
+          "type": "dict",
+          "description": "Tool call with name and arguments",
+          "examples": {
+            "click": {
+              "name": "computer_use",
+              "arguments": {
+                "action": "left_click",
+                "coordinate": [52, 78]
+              }
+            },
+            "wait": {
+              "name": "computer_use",
+              "arguments": {
+                "action": "wait",
+                "duration": 3.0
+              }
+            },
+            "bbox": {
+              "name": "get_bbox",
+              "arguments": {
+                "element": "taskbar",
+                "bbox_2d": [0, 955, 1000, 1000]
+              }
+            }
+          }
+        },
+        "pixel_coords": {
+          "type": "tuple[int, int]",
+          "description": "Target (x, y) coordinates in pixels"
+        },
+        "tolerance": {
+          "type": "tuple[float, float]",
+          "description": "Acceptable error in RU units (0-1000 scale)"
+        },
+        "metadata": {
+          "type": "dict",
+          "description": "Task-specific metadata"
+        }
+      }
+    }
+  },
+  "tasks": {
+    "iconlist": {
+      "description": "Click an icon on desktop or taskbar to launch/select it",
+      "output": "list[GeneratedSample]",
+      "output_note": "Returns multiple samples - one per icon in the rendered state",
+      "difficulty": "medium",
+      "subtasks": {
+        "click-desktop-icon": "Click a desktop icon with label",
+        "click-taskbar-icon": "Click a taskbar icon (no label)"
+      },
+      "state_requirements": {
+        "desktop_icons": "Populated with at least one icon for desktop tasks",
+        "taskbar_icons": "Populated with at least one icon for taskbar tasks",
+        "od_loading_visible": "Should be false (loading panel would obscure icons)"
+      },
+      "extra_kwargs": {}
+    },
+    "wait-loading": {
+      "description": "Wait when loading indicator is visible instead of clicking",
+      "output": "list[GeneratedSample]",
+      "output_note": "Returns multiple samples - uses click prompts but expects wait action",
+      "difficulty": "medium",
+      "state_requirements": {
+        "od_loading_visible": "Must be true (loading panel visible)",
+        "desktop_icons": "Populated (prompts reference these icons)",
+        "taskbar_icons": "Populated (prompts reference these icons)"
+      },
+      "extra_kwargs": {},
+      "teaching_goal": "Model learns: when loading indicator visible, wait instead of click"
+    },
+    "grounding": {
+      "description": "Locate and return bounding box of a screen element",
+      "output": "GeneratedSample",
+      "output_note": "Returns single sample with bbox coordinates",
+      "difficulty": "medium",
+      "state_requirements": {
+        "Any valid state": "Grounding uses annotation elements, not state icons"
+      },
+      "extra_kwargs": {
+        "element_label": {
+          "required": false,
+          "description": "Specific element to locate (random if not provided)",
+          "examples": ["desktop", "taskbar", "datetime", "start_button"]
+        }
+      },
+      "available_elements": [
+        "desktop",
+        "taskbar",
+        "datetime",
+        "start_button",
+        "search_bar",
+        "od_loading"
+      ]
+    }
+  },
+  "image": {
+    "width": 1920,
+    "height": 1080,
+    "format": "RGB",
+    "coordinate_system": "pixels from top-left origin"
+  },
+  "action_format": {
+    "coordinate_system": "RU (Resolution Units)",
+    "coordinate_range": [0, 1000],
+    "description": "Coordinates are normalized: (pixel / image_dimension) * 1000",
+    "bbox_format": "[x1, y1, x2, y2] where x2, y2 are bottom-right corner"
+  },
+  "screen_layout": {
+    "desktop_area": {
+      "bounds": [0, 0, 1920, 1032],
+      "description": "Main desktop area for icons with labels"
+    },
+    "taskbar": {
+      "bounds": [0, 1032, 1920, 48],
+      "description": "Windows 11 taskbar at bottom"
+    },
+    "datetime_area": {
+      "bounds": [1840, 1050, 80, 30],
+      "description": "Clock/date display in bottom-right"
+    }
+  },
+  "examples": {
+    "single_grounding_sample": {
+      "description": "Generate one grounding sample",
+      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng)\nsample = generate_sample('grounding', state, rng=rng)\n\n# sample.image -> PIL Image (1920x1080)\n# sample.prompt -> 'Locate the taskbar'\n# sample.action -> {'name': 'get_bbox', 'arguments': {'element': 'taskbar', 'bbox_2d': [0, 955, 1000, 1000]}}"
+    },
+    "iconlist_samples": {
+      "description": "Generate click samples for all icons",
+      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng, num_desktop_icons=5, num_taskbar_icons=3)\nsamples = generate_sample('iconlist', state, rng=rng)\n\n# samples is a list - one sample per icon\nfor s in samples:\n    print(f'{s.task_type}: {s.prompt}')\n    # click-desktop-icon: Double-click on the Open Dental icon to launch it\n    # click-taskbar-icon: Click the Chrome icon in the taskbar"
+    },
+    "wait_samples": {
+      "description": "Generate wait samples when loading visible",
+      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng, od_loading_visible=True)\nsamples = generate_sample('wait-loading', state, rng=rng)\n\n# samples use click prompts but expect wait action\nfor s in samples:\n    print(f'{s.prompt} -> {s.action}')\n    # 'Double-click on the Open Dental icon' -> {'name': 'computer_use', 'arguments': {'action': 'wait', 'duration': 3.0}}"
+    },
+    "batch_generation": {
+      "description": "Generate all task types at once",
+      "code": "from api import generate_tasks\nfrom random import Random\n\nrng = Random(42)\nsamples = generate_tasks(\n    ['iconlist', 'grounding', 'wait-loading'],\n    rng=rng\n)\n\n# Flat list of all samples\nprint(f'Total samples: {len(samples)}')\nfor s in samples:\n    s.image.save(f'{s.task_type}_{s.metadata.get(\"icon_id\", \"element\")}.png')"
+    }
+  }
+}

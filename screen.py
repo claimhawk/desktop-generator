@@ -174,3 +174,56 @@ OD_LOADING_PANEL: dict[str, Any] = {
 # Legacy exports for backwards compatibility
 DESKTOP_ICONS = get_desktop_icons()
 TASKBAR_ICONS = get_taskbar_icons()
+
+
+# -----------------------------------------------------------------------------
+# Scaling
+# -----------------------------------------------------------------------------
+
+# Desktop-generator renders at native annotation size (1920x1080)
+_ANNOTATION_SIZE = tuple(ANNOTATION_CONFIG.image_size) if ANNOTATION_CONFIG else (1920, 1080)
+_GENERATOR_SIZE = (1920, 1080)  # From DesktopScreen.Meta.size
+
+_SCALE_X = _GENERATOR_SIZE[0] / _ANNOTATION_SIZE[0]
+_SCALE_Y = _GENERATOR_SIZE[1] / _ANNOTATION_SIZE[1]
+
+# Export image dimensions for grounding tasks
+IMAGE_WIDTH, IMAGE_HEIGHT = _GENERATOR_SIZE
+
+
+def scale_bbox(bbox: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    """Scale bbox (x, y, width, height) from annotation to generator space."""
+    x, y, w, h = bbox
+    return (int(x * _SCALE_X), int(y * _SCALE_Y), int(w * _SCALE_X), int(h * _SCALE_Y))
+
+
+# -----------------------------------------------------------------------------
+# Grounding Task Accessors
+# -----------------------------------------------------------------------------
+
+def get_all_groundable_elements() -> list[tuple[str, tuple[int, int, int, int]]]:
+    """Get all elements suitable for grounding tasks with scaled bboxes.
+
+    Returns:
+        List of (label, scaled_bbox) tuples.
+        Bbox is (x, y, width, height) in generator coordinate space.
+    """
+    results: list[tuple[str, tuple[int, int, int, int]]] = []
+    if ANNOTATION_CONFIG is None:
+        return results
+
+    for el in ANNOTATION_CONFIG.elements:
+        if el.label:
+            results.append((el.label, scale_bbox(el.bbox)))
+    return results
+
+
+def get_element_bbox(name: str) -> tuple[int, int, int, int]:
+    """Get scaled bounding box for an element by name."""
+    if ANNOTATION_CONFIG is None:
+        raise ValueError("Annotation config not available")
+
+    el = ANNOTATION_CONFIG.get_element_by_label(name)
+    if el is None:
+        raise ValueError(f"Element '{name}' not found in annotation")
+    return scale_bbox(el.bbox)

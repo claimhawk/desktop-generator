@@ -1,12 +1,12 @@
-# Dataset configuration for desktop-generator
+# Dataset configuration for desktop-generator (1% TEST VERSION)
 
 name_prefix: desktop
 seed: 420
 
 tasks:
-  iconlist: 2000
-  wait-loading: 100
-  grounding: 500
+  iconlist: 20        # 1% of 2000
+  wait-loading: 1     # 1% of 100
+  grounding: 5        # 1% of 500
 
 
 # Train/val split

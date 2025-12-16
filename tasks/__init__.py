@@ -7,12 +7,15 @@
 Tasks are driven by annotation.json:
 - IconListTask: generates samples for tasks targeting iconlist elements
 - WaitLoadingTask: generates wait samples when loading element is visible
+- GroundingTask: generates grounding samples for element bounding box detection
 """
 
+from tasks.grounding_task import GroundingTask
 from tasks.iconlist_task import IconListTask
 from tasks.wait_loading import WaitLoadingTask
 
 __all__ = [
+    "GroundingTask",
     "IconListTask",
     "WaitLoadingTask",
 ]

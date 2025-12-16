@@ -16,7 +16,7 @@ from pathlib import Path
 from cudag import run_generator
 
 from renderer import DesktopRenderer
-from tasks import IconListTask, WaitLoadingTask
+from tasks import GroundingTask, IconListTask, WaitLoadingTask
 
 
 def main() -> None:
@@ -28,6 +28,7 @@ def main() -> None:
     tasks = [
         IconListTask(config={}, renderer=renderer),
         WaitLoadingTask(config={}, renderer=renderer),
+        GroundingTask(config={}, renderer=renderer),
     ]
 
     run_generator(

@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025 Tylt LLC. All rights reserved.
+# CONFIDENTIAL AND PROPRIETARY. Unauthorized use, copying, or distribution
+# is strictly prohibited. For licensing inquiries: hello@claimhawk.app
+
+# Full production pipeline: preview -> generate on Modal
+#
+# Usage:
+#   ./scripts/production.sh              # Full production run
+#   ./scripts/production.sh --dry        # Preview only, skip Modal generation
+#   ./scripts/production.sh --yes        # Skip confirmation prompt
+#   ./scripts/production.sh --name <n>   # Custom dataset name
+
+set -euo pipefail
+
+DRY_RUN=false
+YES=false
+MODAL_ARGS=()
+
+# Parse args
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry)
+            DRY_RUN=true
+            shift
+            ;;
+        --yes|-y)
+            YES=true
+            shift
+            ;;
+        *)
+            MODAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+echo "========================================"
+echo "PRODUCTION PIPELINE"
+echo "========================================"
+echo ""
+
+# STAGE 1: Preview
+echo "STAGE 1: Preview Dataset Distribution"
+echo "----------------------------------------"
+echo ""
+
+if [[ -f "preview_dataset.py" ]]; then
+    uv run python preview_dataset.py
+
+    if [[ $? -ne 0 ]]; then
+        echo ""
+        echo "Preview failed"
+        exit 1
+    fi
+else
+    echo "WARNING: preview_dataset.py not found, skipping preview"
+    echo ""
+fi
+
+echo ""
+echo "========================================"
+echo ""
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[DRY RUN] Skipping Modal generation"
+    echo ""
+    echo "To run full pipeline:"
+    echo "  ./scripts/production.sh"
+    echo ""
+    echo "To run with custom name:"
+    echo "  ./scripts/production.sh --name desktop--mike--experiment"
+    echo ""
+    exit 0
+fi
+
+# STAGE 2: Confirm
+if [[ "$YES" != "true" ]]; then
+    echo "STAGE 2: Confirmation"
+    echo "----------------------------------------"
+    echo ""
+    read -p "Proceed with Modal generation? (y/N) " -n 1 -r
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+fi
+
+echo ""
+echo "========================================"
+echo ""
+
+# STAGE 3: Modal Generation
+echo "STAGE 3: Modal Dataset Generation"
+echo "----------------------------------------"
+echo ""
+
+if [[ ${#MODAL_ARGS[@]} -gt 0 ]]; then
+    modal run modal_apps/generate.py "${MODAL_ARGS[@]}"
+else
+    modal run modal_apps/generate.py
+fi
+
+if [[ $? -ne 0 ]]; then
+    echo ""
+    echo "Modal generation failed"
+    exit 1
+fi
+
+echo ""
+echo "========================================"
+echo "PIPELINE COMPLETE"
+echo "========================================"
+echo ""
+echo "Dataset is ready for training!"
+echo ""
+echo "To view datasets on volume:"
+echo "  modal volume ls claimhawk-lora-training data/datasets/"
+echo ""
