@@ -91,6 +91,7 @@ class DesktopState(BaseState):
         num_desktop_icons: int = 5,
         num_taskbar_icons: int = 3,
         od_loading_visible: bool = False,
+        **_kwargs: object,  # Accept and ignore unknown kwargs
     ) -> "DesktopState":
         """Generate a random desktop state.
 
