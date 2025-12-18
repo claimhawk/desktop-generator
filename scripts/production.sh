@@ -98,9 +98,9 @@ echo "----------------------------------------"
 echo ""
 
 if [[ ${#MODAL_ARGS[@]} -gt 0 ]]; then
-    modal run modal_apps/generate.py "${MODAL_ARGS[@]}"
+    modal run --detach modal_apps/generate.py "${MODAL_ARGS[@]}"
 else
-    modal run modal_apps/generate.py
+    modal run --detach modal_apps/generate.py
 fi
 
 if [[ $? -ne 0 ]]; then

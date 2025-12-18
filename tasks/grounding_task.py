@@ -15,7 +15,7 @@ from cudag.core import BaseTask, TaskContext, TaskSample, TestCase
 from cudag.core.grounding_task import bbox_to_ru
 from cudag.prompts.tools import BboxCall
 
-from screen import get_all_groundable_elements
+from screen import ANNOTATION_CONFIG, scale_bbox
 from state import DesktopState
 
 
@@ -28,15 +28,36 @@ GROUNDING_PROMPTS = [
 ]
 
 
+def get_iconlist_elements() -> list[tuple[str, tuple[int, int, int, int]]]:
+    """Get only iconlist elements (desktop and taskbar) for grounding.
+
+    Returns:
+        List of (label, scaled_bbox) tuples for iconlist elements only.
+    """
+    results: list[tuple[str, tuple[int, int, int, int]]] = []
+    if ANNOTATION_CONFIG is None:
+        return results
+
+    for el in ANNOTATION_CONFIG.elements:
+        # Only include iconlist elements (desktop, taskbar)
+        if el.element_type == "iconlist" and el.label:
+            results.append((el.label, scale_bbox(el.bbox)))
+    return results
+
+
 class GroundingTask(BaseTask):
-    """Task that generates grounding samples for element detection."""
+    """Task that generates grounding samples for element detection.
+
+    Only generates grounding for iconlist elements (desktop and taskbar),
+    not for text elements like datetime.
+    """
 
     task_type = "grounding"
 
     def __init__(self, config: dict[str, Any], renderer: Any) -> None:
         """Initialize the grounding task."""
         super().__init__(config, renderer)
-        self._groundable_elements = get_all_groundable_elements()
+        self._groundable_elements = get_iconlist_elements()
 
     def generate_sample(self, ctx: TaskContext) -> TaskSample:
         """Generate a grounding training sample."""

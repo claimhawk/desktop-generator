@@ -1,5 +1,6 @@
 {
-  "screenName": "frame_0003",
+  "id": "screen_1766074608691",
+  "name": "frame_0003",
   "imageSize": [
     1920,
     1080
@@ -187,45 +188,6 @@
       "toleranceY": 24
     },
     {
-      "id": "el_1764991192648",
-      "type": "mask",
-      "bbox": {
-        "x": 11,
-        "y": 1038,
-        "width": 117,
-        "height": 37
-      },
-      "maskColor": "#d7d7d7",
-      "toleranceX": 82,
-      "toleranceY": 26
-    },
-    {
-      "id": "el_1764991210387",
-      "type": "mask",
-      "bbox": {
-        "x": 1306,
-        "y": 73,
-        "width": 38,
-        "height": 34
-      },
-      "maskColor": "#000000",
-      "toleranceX": 27,
-      "toleranceY": 24
-    },
-    {
-      "id": "el_1764991216654",
-      "type": "mask",
-      "bbox": {
-        "x": 703,
-        "y": -15,
-        "width": 505,
-        "height": 70
-      },
-      "maskColor": "#000000",
-      "toleranceX": 354,
-      "toleranceY": 49
-    },
-    {
       "id": "el_1764993447117",
       "type": "loading",
       "bbox": {
@@ -262,9 +224,5 @@
       "waitTime": 3,
       "taskType": "load-wait"
     }
-  ],
-  "metadata": {
-    "sourceApp": "",
-    "screenType": ""
-  }
+  ]
 }

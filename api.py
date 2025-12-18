@@ -7,6 +7,8 @@
 This module provides the entry points for other projects to generate
 Windows 11 desktop screenshots and training samples.
 
+All images are cropped to the desktop bbox (no taskbar).
+
 Usage:
     from api import generate_sample, generate_tasks
     from state import DesktopState
@@ -32,8 +34,6 @@ from PIL import Image
 
 from renderer import DesktopRenderer
 from state import DesktopState
-from tasks import GroundingTask, IconListTask, WaitLoadingTask
-from cudag.core import TaskContext
 
 
 @dataclass
@@ -60,6 +60,24 @@ def _get_renderer() -> DesktopRenderer:
         _renderer = DesktopRenderer(assets_dir=Path("assets"))
         _renderer.load_assets()
     return _renderer
+
+
+def _get_desktop_bbox() -> tuple[int, int, int, int]:
+    """Get the desktop element bbox from annotation."""
+    from screen import ANNOTATION_CONFIG
+    if ANNOTATION_CONFIG is None:
+        return (0, 0, 1914, 1032)  # Default
+    element = ANNOTATION_CONFIG.get_element_by_label("desktop")
+    if element is None:
+        return (0, 0, 1914, 1032)
+    return element.bbox
+
+
+def _crop_to_desktop(image: Image.Image) -> Image.Image:
+    """Crop image to desktop bbox."""
+    bbox = _get_desktop_bbox()
+    crop_box = (bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3])
+    return image.crop(crop_box)
 
 
 def generate_sample(
@@ -89,7 +107,9 @@ def generate_sample(
     # Generate state if not provided
     if state is None:
         od_loading = task_type == "wait-loading"
-        state = DesktopState.generate(rng, od_loading_visible=od_loading)
+        state = DesktopState.generate(
+            rng, od_loading_visible=od_loading, num_taskbar_icons=0
+        )
 
     # Render the image once
     image, metadata = renderer.render(state)
@@ -115,81 +135,82 @@ def _generate_iconlist_samples(
     image: Image.Image,
     rng: Random,
 ) -> list[GeneratedSample]:
-    """Generate iconlist samples for all icons in state."""
-    task = IconListTask(config={}, renderer=renderer)
-
-    # Create a minimal context
-    ctx = TaskContext(rng=rng, index=0, output_dir=Path("."))
-
-    # IconListTask needs to save image, but we already have it
-    # We'll use the task's internal methods directly
-    from screen import ANNOTATION_CONFIG, get_desktop_icons, get_taskbar_icons
+    """Generate iconlist samples with desktop cropping."""
+    from screen import ANNOTATION_CONFIG, get_desktop_icons
 
     if ANNOTATION_CONFIG is None:
         return []
 
+    desktop_element = ANNOTATION_CONFIG.get_element_by_label("desktop")
+    if desktop_element is None:
+        return []
+
+    # Crop to desktop bbox
+    cropped_img = _crop_to_desktop(image)
+    crop_x, crop_y = desktop_element.bbox[0], desktop_element.bbox[1]
+
     samples: list[GeneratedSample] = []
+    icons_in_state = state.desktop_icons
+    icons_info = get_desktop_icons()
 
-    # Process each iconlist element (desktop, taskbar)
-    for element in ANNOTATION_CONFIG.elements:
-        if element.element_type != "iconlist":
+    # Get click tasks for desktop element
+    for ann_task in ANNOTATION_CONFIG.tasks:
+        if ann_task.target_element_id != desktop_element.element_id:
+            continue
+        if ann_task.action not in ("left_click", "double_click"):
             continue
 
-        # Get icons based on element
-        if element.label == "desktop":
-            icons_in_state = state.desktop_icons
-            icons_info = get_desktop_icons()
-        elif element.label == "taskbar":
-            icons_in_state = state.taskbar_icons
-            icons_info = get_taskbar_icons()
-        else:
-            continue
+        # Generate sample for each icon
+        for icon in icons_in_state:
+            icon_info = icons_info.get(icon.icon_id, {})
+            label = icon_info.get("label", icon.icon_id)
 
-        # Get click tasks for this element
-        for ann_task in ANNOTATION_CONFIG.tasks:
-            if ann_task.target_element_id != element.element_id:
-                continue
-            if ann_task.action != "left_click":
-                continue
+            prompt = ann_task.prompt_template.replace("[icon_label]", label)
 
-            # Generate sample for each icon
-            for icon in icons_in_state:
-                icon_info = icons_info.get(icon.icon_id, {})
-                label = icon_info.get("label", icon.icon_id)
+            # Coordinates relative to crop region
+            abs_x, abs_y = icon.center
+            rel_x = abs_x - crop_x
+            rel_y = abs_y - crop_y
 
-                prompt = ann_task.prompt_template.replace("[icon_label]", label)
-                center = icon.center
+            # Convert to RU based on cropped image size
+            ru_x = int((rel_x / cropped_img.width) * 1000)
+            ru_y = int((rel_y / cropped_img.height) * 1000)
 
-                # Convert to RU
-                ru_x = int((center[0] / image.width) * 1000)
-                ru_y = int((center[1] / image.height) * 1000)
+            action = {
+                "name": "computer_use",
+                "arguments": {
+                    "action": ann_task.action,
+                    "coordinate": [ru_x, ru_y],
+                },
+            }
 
-                action = {
-                    "name": "computer_use",
-                    "arguments": {
-                        "action": "left_click",
-                        "coordinate": [ru_x, ru_y],
+            samples.append(
+                GeneratedSample(
+                    task_type=ann_task.task_type,
+                    image=cropped_img,
+                    prompt=prompt,
+                    action=action,
+                    pixel_coords=(rel_x, rel_y),
+                    tolerance=(30.0, 30.0),
+                    metadata={
+                        "element_type": desktop_element.element_type,
+                        "element_label": "desktop",
+                        "icon_id": icon.icon_id,
+                        "icon_label": label,
+                        "crop_region": desktop_element.bbox,
                     },
-                }
-
-                samples.append(
-                    GeneratedSample(
-                        task_type=ann_task.task_type,
-                        image=image,
-                        prompt=prompt,
-                        action=action,
-                        pixel_coords=center,
-                        tolerance=(30.0, 30.0),
-                        metadata={
-                            "element_type": element.element_type,
-                            "element_label": element.label,
-                            "icon_id": icon.icon_id,
-                            "icon_label": label,
-                        },
-                    )
                 )
+            )
 
     return samples
+
+
+# Wait-specific prompts for API
+_WAIT_PROMPTS = [
+    "A loading screen is visible. What action should you take?",
+    "The application is loading. What should you do?",
+    "Open Dental is starting up. What action is appropriate?",
+]
 
 
 def _generate_wait_samples(
@@ -198,8 +219,8 @@ def _generate_wait_samples(
     image: Image.Image,
     rng: Random,
 ) -> list[GeneratedSample]:
-    """Generate wait samples when loading panel is visible."""
-    from screen import ANNOTATION_CONFIG, get_desktop_icons, get_taskbar_icons
+    """Generate wait samples with desktop cropping when loading visible."""
+    from screen import ANNOTATION_CONFIG
 
     if ANNOTATION_CONFIG is None:
         return []
@@ -210,59 +231,40 @@ def _generate_wait_samples(
 
     wait_time = wait_task.wait_time if wait_task.wait_time > 0 else 3.0
 
+    desktop_element = ANNOTATION_CONFIG.get_element_by_label("desktop")
+    if desktop_element is None:
+        return []
+
+    # Crop to desktop bbox
+    cropped_img = _crop_to_desktop(image)
+
     samples: list[GeneratedSample] = []
-    desktop_icons = get_desktop_icons()
-    taskbar_icons = get_taskbar_icons()
 
-    # Use click prompts but expect wait action
-    for task in ANNOTATION_CONFIG.tasks:
-        if task.action == "wait":
-            continue
+    # Generate one sample per prompt
+    for prompt in _WAIT_PROMPTS:
+        action = {
+            "name": "computer_use",
+            "arguments": {
+                "action": "wait",
+                "duration": wait_time,
+            },
+        }
 
-        element = ANNOTATION_CONFIG.get_element(task.target_element_id)
-        if element is None or element.element_type != "iconlist":
-            continue
-
-        if element.label == "desktop":
-            icons_in_state = state.desktop_icons
-            icons_info = desktop_icons
-        elif element.label == "taskbar":
-            icons_in_state = state.taskbar_icons
-            icons_info = taskbar_icons
-        else:
-            continue
-
-        for icon in icons_in_state:
-            icon_info = icons_info.get(icon.icon_id, {})
-            label = icon_info.get("label", icon.icon_id)
-
-            prompt = task.prompt_template.replace("[icon_label]", label)
-
-            action = {
-                "name": "computer_use",
-                "arguments": {
-                    "action": "wait",
-                    "duration": wait_time,
+        samples.append(
+            GeneratedSample(
+                task_type=wait_task.task_type,
+                image=cropped_img,
+                prompt=prompt,
+                action=action,
+                pixel_coords=(0, 0),
+                tolerance=(0.0, 0.0),
+                metadata={
+                    "wait_seconds": wait_time,
+                    "element_label": "desktop",
+                    "crop_region": desktop_element.bbox,
                 },
-            }
-
-            samples.append(
-                GeneratedSample(
-                    task_type=wait_task.task_type,
-                    image=image,
-                    prompt=prompt,
-                    action=action,
-                    pixel_coords=(0, 0),
-                    tolerance=(0.0, 0.0),
-                    metadata={
-                        "wait_seconds": wait_time,
-                        "original_task_type": task.task_type,
-                        "element_label": element.label,
-                        "icon_id": icon.icon_id,
-                        "icon_label": label,
-                    },
-                )
             )
+        )
 
     return samples
 

@@ -143,6 +143,41 @@ Taskbar icons in annotation.json have `elementId` (unique identifier) but need `
 
 ---
 
+## Current Task: Fix Taskbar and Load-Wait 0% Accuracy (2025-12-17)
+
+### Status: 🔄 In Progress (regeneration running)
+
+### Problem
+Test results from checkpoint-60 showed:
+- dclick-desktop-icon: 100% ✓
+- dclick-taskbar-icon: 0% ✗
+- load-wait: 0% ✗
+
+### Root Causes
+1. **Taskbar Icons:** Training images were cropped to taskbar bbox (688x47), but test images used full-screen (1920x1080) from base class. Coordinate mismatch.
+2. **Load-Wait:** Test images full-screen (inherited), training cropped. Prompts said "click X" but expected "wait" action - confusing signal.
+
+### Solution
+1. Removed taskbar handling entirely (not needed)
+2. Added `generate_tests()` to `iconlist_task.py` with desktop cropping
+3. Changed wait prompts from click-style to wait-specific prompts
+4. Updated `api.py` to remove taskbar, add cropping helpers
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `tasks/iconlist_task.py` | Removed taskbar, added generate_tests() |
+| `tasks/wait_loading.py` | Wait-specific prompts, generate_tests() |
+| `api.py` | Removed taskbar, added cropping helpers |
+| `modal_apps/generate.py` | Fixed cudag path |
+
+### Dataset Regeneration
+- Deleted: `desktop--mike--20251210_174629`, `desktop--mike--20251217_093144`
+- Generated: `desktop--modal--20251217_232037`
+- Stats: 21,654 training (17,323 train + 4,331 val), 200 test cases
+
+---
+
 ## AI-Assisted Development
 
 All implementation work done by 1 developer + AI (Claude Code).

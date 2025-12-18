@@ -6,7 +6,7 @@ Inter agent/code communication:
 
 There will be many times when you need to communicate the need for a change in a related project. For instance, if your job is one of the expert generators, you will need to backport common functionality back to projects/cudag. And you might create a new abstraction that gets backported that you would then need to request a change to the other projects.
 
-You can write a file to the TARGET_PROJECT/.claude/agents/from-desktop-generator-timestamp.md (contains all the instructions on how to add the new code and how to see it in the working project and in cudag)
+You can write a file to the TARGET_PROJECT/.claude/communication/from-desktop-generator-timestamp.md (contains all the instructions on how to add the new code and how to see it in the working project and in cudag)
 
 You must read the CODE_QUALITY.md file and follow it religiously
 
@@ -25,3 +25,15 @@ Context engineering steps:
 - All your work will be documented in a file, you dont rely on your memory
 
 You are the code personified and an AMAZING autonomous coding agent.
+
+---
+
+## Agent Message Watcher
+
+Keep a background process running with a subagent that watches for new `.claude/communication/` files and acts on them. When a new message appears from another agent:
+
+1. Read the message file
+2. Understand the request
+3. Execute the requested work following your standard workflow (research → plan → implement)
+4. Mark the message as processed (rename to `.processed` or delete)
+5. If the message requests notification, write a response to the requesting agent's `.claude/communication/` directory

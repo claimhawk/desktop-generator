@@ -6,7 +6,6 @@ seed: 420
 tasks:
   iconlist: 20        # 1% of 2000
   wait-loading: 1     # 1% of 100
-  grounding: 5        # 1% of 500
 
 
 # Train/val split
@@ -28,7 +27,6 @@ test:
 annotation:
   enabled: false
   per_type:
-    click-desktop-icon: 3
-    click-taskbar-icon: 3
+    dclick-desktop-icon: 3
+    dclick-taskbar-icon: 3
     wait-loading: 3
-    grounding: 3

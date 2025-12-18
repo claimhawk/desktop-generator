@@ -260,10 +260,23 @@
     }
   },
   "image": {
-    "width": 1920,
-    "height": 1080,
+    "description": "Images are cropped to element bbox regions",
     "format": "RGB",
-    "coordinate_system": "pixels from top-left origin"
+    "coordinate_system": "pixels from top-left of cropped region",
+    "regions": {
+      "desktop": {
+        "bbox": [0, 0, 1914, 1032],
+        "width": 1914,
+        "height": 1032,
+        "description": "Desktop area without taskbar"
+      },
+      "taskbar": {
+        "bbox": [939, 1033, 688, 47],
+        "width": 688,
+        "height": 47,
+        "description": "Taskbar icon strip only"
+      }
+    }
   },
   "action_format": {
     "coordinate_system": "RU (Resolution Units)",
@@ -272,35 +285,40 @@
     "bbox_format": "[x1, y1, x2, y2] where x2, y2 are bottom-right corner"
   },
   "screen_layout": {
-    "desktop_area": {
-      "bounds": [0, 0, 1920, 1032],
-      "description": "Main desktop area for icons with labels"
+    "full_screen": {
+      "width": 1920,
+      "height": 1080,
+      "description": "Full screen size before cropping"
+    },
+    "desktop": {
+      "bbox": [0, 0, 1914, 1032],
+      "description": "Desktop iconlist region - cropped for desktop samples"
     },
     "taskbar": {
-      "bounds": [0, 1032, 1920, 48],
-      "description": "Windows 11 taskbar at bottom"
+      "bbox": [939, 1033, 688, 47],
+      "description": "Taskbar iconlist region - cropped for taskbar samples"
     },
-    "datetime_area": {
-      "bounds": [1840, 1050, 80, 30],
+    "datetime": {
+      "bbox": [1843, 1039, 63, 34],
       "description": "Clock/date display in bottom-right"
     }
   },
   "examples": {
     "single_grounding_sample": {
-      "description": "Generate one grounding sample",
-      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng)\nsample = generate_sample('grounding', state, rng=rng)\n\n# sample.image -> PIL Image (1920x1080)\n# sample.prompt -> 'Locate the taskbar'\n# sample.action -> {'name': 'get_bbox', 'arguments': {'element': 'taskbar', 'bbox_2d': [0, 955, 1000, 1000]}}"
+      "description": "Generate one grounding sample (full 1920x1080 image)",
+      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng)\nsample = generate_sample('grounding', state, rng=rng)\n\n# sample.image -> PIL Image (1920x1080 - full screen for grounding)\n# sample.prompt -> 'Locate the taskbar'\n# sample.action -> {'name': 'get_bbox', 'arguments': {'element': 'taskbar', 'bbox_2d': [...]}}"
     },
     "iconlist_samples": {
-      "description": "Generate click samples for all icons",
-      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng, num_desktop_icons=5, num_taskbar_icons=3)\nsamples = generate_sample('iconlist', state, rng=rng)\n\n# samples is a list - one sample per icon\nfor s in samples:\n    print(f'{s.task_type}: {s.prompt}')\n    # click-desktop-icon: Double-click on the Open Dental icon to launch it\n    # click-taskbar-icon: Click the Chrome icon in the taskbar"
+      "description": "Generate click samples - cropped per element region",
+      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng, num_desktop_icons=5, num_taskbar_icons=3)\nsamples = generate_sample('iconlist', state, rng=rng)\n\n# Desktop samples: 1914x1032 cropped image\n# Taskbar samples: 688x47 cropped image\nfor s in samples:\n    region = s.metadata['element_label']\n    print(f'{region}: {s.image.size} - {s.prompt}')\n    # desktop: (1914, 1032) - Double-click on the Open Dental icon\n    # taskbar: (688, 47) - Click the Chrome icon in the taskbar"
     },
     "wait_samples": {
-      "description": "Generate wait samples when loading visible",
-      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng, od_loading_visible=True)\nsamples = generate_sample('wait-loading', state, rng=rng)\n\n# samples use click prompts but expect wait action\nfor s in samples:\n    print(f'{s.prompt} -> {s.action}')\n    # 'Double-click on the Open Dental icon' -> {'name': 'computer_use', 'arguments': {'action': 'wait', 'duration': 3.0}}"
+      "description": "Generate wait samples - cropped per element region",
+      "code": "from api import generate_sample\nfrom state import DesktopState\nfrom random import Random\n\nrng = Random(42)\nstate = DesktopState.generate(rng, od_loading_visible=True)\nsamples = generate_sample('wait-loading', state, rng=rng)\n\n# Images cropped to element regions, but action is wait\nfor s in samples:\n    print(f'{s.image.size}: {s.prompt} -> wait')"
     },
     "batch_generation": {
       "description": "Generate all task types at once",
-      "code": "from api import generate_tasks\nfrom random import Random\n\nrng = Random(42)\nsamples = generate_tasks(\n    ['iconlist', 'grounding', 'wait-loading'],\n    rng=rng\n)\n\n# Flat list of all samples\nprint(f'Total samples: {len(samples)}')\nfor s in samples:\n    s.image.save(f'{s.task_type}_{s.metadata.get(\"icon_id\", \"element\")}.png')"
+      "code": "from api import generate_tasks\nfrom random import Random\n\nrng = Random(42)\nsamples = generate_tasks(\n    ['iconlist', 'grounding', 'wait-loading'],\n    rng=rng\n)\n\n# Flat list of all samples with appropriate image sizes\nfor s in samples:\n    s.image.save(f'{s.task_type}_{s.metadata.get(\"element_label\", \"screen\")}_{s.metadata.get(\"icon_id\", \"element\")}.png')"
     }
   }
 }
