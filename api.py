@@ -286,7 +286,7 @@ def _generate_grounding_sample(
 
     # Select element
     if element_label:
-        matches = [(l, b) for l, b in groundable if l == element_label]
+        matches = [(lbl, b) for lbl, b in groundable if lbl == element_label]
         if not matches:
             raise ValueError(f"Element '{element_label}' not found")
         label, bbox = matches[0]

@@ -119,7 +119,6 @@ def generate_dataset(
 
     # Import after path setup
     from renderer import DesktopRenderer
-    from state import DesktopState
     from cudag.core.dataset import DatasetConfig, DatasetBuilder
     from tasks import IconListTask, WaitLoadingTask, GroundingTask
 
@@ -218,7 +217,7 @@ def generate_dataset(
         volume.commit()
         print(f"  [Checkpoint saved: {samples_done} samples]")
 
-    result_dir = builder.build(
+    builder.build(
         start_index=start_index,
         checkpoint_callback=checkpoint_callback,
         checkpoint_interval=1000,

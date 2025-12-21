@@ -16,7 +16,9 @@ from cudag.core import Screen, region
 
 
 # Load annotation config at module level
-_ANNOTATIONS_DIR = Path(__file__).parent / "assets" / "annotations"
+# New annotation structure uses manifest.json with frames subdirectories
+_ANNOTATIONS_BASE = Path(__file__).parent / "assets" / "annotations"
+_ANNOTATIONS_DIR = _ANNOTATIONS_BASE / "frame_0003"  # First frame from manifest
 ANNOTATION_CONFIG: AnnotationConfig | None = None
 
 if _ANNOTATIONS_DIR.exists():
@@ -34,7 +36,7 @@ class DesktopScreen(Screen):
 
     class Meta:
         name = "desktop"
-        base_image = "annotations/masked.png"  # Use masked image as base
+        base_image = "annotations/frame_0003/masked.jpg"  # Masked image from annotation frame
         size = (1920, 1080)
         task_types = ["click-desktop-icon", "click-taskbar-icon"]
 

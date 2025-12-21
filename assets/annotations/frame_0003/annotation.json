@@ -210,13 +210,6 @@
       "taskType": "dclick-desktop-icon"
     },
     {
-      "id": "el_1764990869599_icon_",
-      "prompt": "Double click the [icon_label] icon to open [icon_label]",
-      "targetElementId": "el_1764990869599",
-      "action": "double_click",
-      "taskType": "dclick-taskbar-icon"
-    },
-    {
       "id": "el_1764993447117_wait",
       "prompt": "Wait for loading indicator to disappear",
       "targetElementId": "el_1764993447117",
