@@ -1,6 +1,24 @@
-# Repository Guidelines
+# CLAUDE.md
 
-This file provides guidance to AI coding assistants when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## ⚡ FIRST: Read system.md
+
+**Before doing anything else**, read and execute the startup actions in [`system.md`](./system.md).
+
+That file contains:
+- **REQUIRED** background processes you must start immediately
+- Git workflow rules (fetch & rebase, never pull)
+- Inter-agent communication protocol
+- Your role and identity as an autonomous agent
+
+**Do not skip this step.**
+
+---
+
+## Repository Guidelines
 
 ## Project Overview
 
