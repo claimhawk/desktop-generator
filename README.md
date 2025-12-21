@@ -54,3 +54,19 @@ python generate.py --config config/dataset.yaml
 - Copyright headers
 
 AI-assisted code is welcome provided it includes tests and passes all checks.
+
+---
+
+<div align="center">
+
+### 🚀 We're Hiring
+
+**ClaimHawk** builds computer-use agents that automate real work using vision-language models.
+
+If you have a passion for machine learning (and some real background) and want to see the path to **100x developer** — we have open intern positions.
+
+**No resumes.** Just shoot an email with your qualifications and passions to:
+
+📧 **hello@claimhawk.app**
+
+</div>
